@@ -1,12 +1,28 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import psutil
+import os
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Conv1D, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
+
+# --- MONITORING UTILITY ---
+def display_system_monitor():
+    """Tracks CPU and RAM usage to show the cost of Deep Learning training."""
+    process = psutil.Process(os.getpid())
+    mem_mb = process.memory_info().rss / (1024 * 1024)
+    # interval=0.1 is crucial during training to catch the peaks
+    cpu_percent = process.cpu_percent(interval=0.1)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🚀 Training Monitor")
+    c1, c2 = st.sidebar.columns(2)
+    c1.metric("CPU Usage", f"{cpu_percent}%")
+    c2.metric("RAM Footprint", f"{mem_mb:.1f} MB")
 
 st.set_page_config(page_title="Applied ML Demo", layout="wide")
 
@@ -17,14 +33,20 @@ activity = st.sidebar.radio("Navigation", [
     "Activity 4: Comparison"
 ])
 
+# Display the monitor in the sidebar
+display_system_monitor()
+
 @st.cache_data
 def load_data():
     try:
+        # Attempt to load local file
         df = pd.read_csv("diabetes.csv")
     except:
+        # Fallback to sklearn dataset if file not found
         from sklearn.datasets import load_diabetes
         data = load_diabetes(as_frame=True)
         df = data.frame.copy()
+        # Create a synthetic binary outcome for classification
         df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
         df.drop(columns='target', inplace=True)
     return df
@@ -42,6 +64,8 @@ if activity == "Activity 1: Scenario":
     and selected lab results such as glucose, creatinine, and potassium.
     """)
     
+    
+    
     st.subheader("Task Details")
     st.write("- **Job Task:** Binary Classification (Predicting 0 for Survival, 1 for Death).")
     st.write("- **CNN Advantage:** 1D CNNs can identify complex relationships between different lab values and demographics without manual feature engineering.")
@@ -51,21 +75,17 @@ elif activity == "Activity 2 & 3: Interactive CNN":
     st.title("Activity 2 & 3: Training and Metrics")
     
     st.success("""
-    **Instructions:** 1. Adjust the **Hyperparameters** in the sidebar to configure your CNN.
-    2. Click **'Train Next Fold'** to execute one of the 5 cross-validation folds.
-    3. Observe how the **Sensitivity** and **Specificity** change with each fold.
+    **Instructions:** 1. Adjust the **Hyperparameters** in the sidebar.
+    2. Click **'Train Next Fold'** to execute one segment of 5-fold cross-validation.
+    3. Watch the **Training Monitor** in the sidebar to see the CPU hit during training!
     """)
 
-    # Interactive Sidebar for Hyperparameters with Tooltips
+    # Interactive Sidebar for Hyperparameters
     st.sidebar.header("Model Hyperparameters")
-    filt1 = st.sidebar.slider("Conv1D Layer 1 Filters", 16, 64, 32, 
-                              help="Number of patterns the first layer tries to learn from the clinical data.")
-    filt2 = st.sidebar.slider("Conv1D Layer 2 Filters", 32, 128, 64, 
-                              help="Number of patterns the second layer learns from the previous layer's output.")
-    drop_val = st.sidebar.slider("Dropout Rate", 0.0, 0.5, 0.3, 
-                                 help="Randomly shuts off neurons to prevent the model from memorizing (overfitting) the training data.")
-    lr = st.sidebar.select_slider("Learning Rate", options=[0.01, 0.001, 0.0001], value=0.001, 
-                                  help="Controls how much the model's weights change during training. Smaller values are more stable.")
+    filt1 = st.sidebar.slider("Conv1D Layer 1 Filters", 16, 64, 32, help="Learns patterns from raw clinical data.")
+    filt2 = st.sidebar.slider("Conv1D Layer 2 Filters", 32, 128, 64, help="Learns complex relationships from the first layer.")
+    drop_val = st.sidebar.slider("Dropout Rate", 0.0, 0.5, 0.3, help="Prevents the model from memorizing the data (overfitting).")
+    lr = st.sidebar.select_slider("Learning Rate", options=[0.01, 0.001, 0.0001], value=0.001)
 
     if 'cv_results' not in st.session_state:
         st.session_state.cv_results = []
@@ -79,7 +99,7 @@ elif activity == "Activity 2 & 3: Interactive CNN":
         st.dataframe(df.head(10))
         
         btn_col1, btn_col2 = st.columns(2)
-        if btn_col1.button("Train Next Fold", help="Starts training for the next segment of the 5-fold cross-validation."):
+        if btn_col1.button("Train Next Fold"):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
             kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -93,6 +113,7 @@ elif activity == "Activity 2 & 3: Interactive CNN":
                 X_val = scaler.transform(X[val_idx]).reshape(len(val_idx), X.shape[1], 1)
                 y_train, y_val = y[train_idx], y[val_idx]
 
+                # CNN Architecture
                 model = Sequential([
                     Input(shape=(X.shape[1], 1)),
                     Conv1D(filt1, kernel_size=2, activation='relu'),
@@ -105,6 +126,7 @@ elif activity == "Activity 2 & 3: Interactive CNN":
                 model.compile(optimizer=Adam(lr), loss='binary_crossentropy', metrics=['accuracy'])
                 
                 with st.spinner(f"Training Fold {st.session_state.current_fold + 1}..."):
+                    # The CPU usage will peak here
                     model.fit(X_train, y_train, epochs=30, batch_size=16, verbose=0)
                 
                 y_pred = (model.predict(X_val, verbose=0) > 0.5).astype(int).flatten()
@@ -122,7 +144,7 @@ elif activity == "Activity 2 & 3: Interactive CNN":
             else:
                 st.success("5-Fold Cross Validation Complete.")
 
-        if btn_col2.button("Reset Session", help="Clears all results and starts over."):
+        if btn_col2.button("Reset Session"):
             st.session_state.cv_results = []
             st.session_state.current_fold = 0
             st.rerun()
@@ -136,23 +158,20 @@ elif activity == "Activity 2 & 3: Interactive CNN":
             st.write("**Average Metrics Across Folds**")
             avg_df = res_df.mean().to_frame(name="Value").T
             st.dataframe(avg_df.style.format("{:.3f}"))
-            
-            with st.expander("What do these mean?"):
-                st.write("**Sensitivity (Recall):** Ability to find all patients who will die (avoiding missed cases).")
-                st.write("**Specificity:** Ability to correctly identify patients who will survive (avoiding false alarms).")
         else:
             st.info("No data yet. Click 'Train Next Fold' to begin.")
+            
+        
 
 # Activity 4
 elif activity == "Activity 4: Comparison":
     st.title("Activity 4: Model Comparison")
-    st.info("**Instructions:** Review the trade-offs between the model types to determine which is best for a clinical setting.")
+    st.info("**Instructions:** Review the trade-offs between model types for clinical settings.")
     
     st.subheader("CNN vs. Decision Tree")
     st.write("""
-    In previous modules, we used Decision Trees. Compared to CNNs:
-    - **Decision Trees:** Easier to explain to doctors (e.g., 'If glucose > 200, then...').
-    - **CNNs:** Often more accurate on large clinical databases but harder to explain ('Black Box').
+    - **Decision Trees:** Highly interpretable. Doctors can follow the logic ('If glucose > 200...').
+    - **CNNs:** Superior performance on high-dimensional data but function as a 'Black Box'.
     """)
     
-    st.warning("In a hospital, a model with slightly lower accuracy but higher interpretability (like a Decision Tree) is often preferred for safety.")
+    st.warning("Interpretability is often a regulatory requirement in clinical AI deployment.")

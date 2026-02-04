@@ -5,3 +5,4 @@ tensorflow
 streamlit
 pandas
 scikit-learn
+psutil
