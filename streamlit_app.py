@@ -15,25 +15,24 @@ def display_system_monitor():
     """Tracks CPU and RAM usage to show the cost of Deep Learning training."""
     process = psutil.Process(os.getpid())
     mem_mb = process.memory_info().rss / (1024 * 1024)
-    # interval=0.1 is crucial during training to catch the peaks
     cpu_percent = process.cpu_percent(interval=0.1)
     
     st.sidebar.markdown("---")
-    st.sidebar.subheader("🚀 Training Monitor")
+    st.sidebar.subheader("System Monitor")
     c1, c2 = st.sidebar.columns(2)
-    c1.metric("CPU Usage", f"{cpu_percent}%")
-    c2.metric("RAM Footprint", f"{mem_mb:.1f} MB")
+    c1.metric("CPU Usage", f"{cpu_percent}%", help="Watch this spike when you click 'Train Model'.")
+    c2.metric("RAM Footprint", f"{mem_mb:.1f} MB", help="Memory currently used by the app and dataset.")
 
 st.set_page_config(page_title="Applied ML Demo", layout="wide")
 
 # Navigation
 activity = st.sidebar.radio("Navigation", [
-    "Activity 1: Scenario",
-    "Activity 2 & 3: Interactive CNN",
-    "Activity 4: Comparison"
-])
+    "Activity 1: Clinical Scenario",
+    "Activity 2: Base Performance & Accuracy",
+    "Activity 3: Advanced Clinical Metrics",
+    "Activity 4: CNN vs Decision Tree"
+], help="Navigate through the module activities.")
 
-# Display the monitor in the sidebar
 display_system_monitor()
 
 @st.cache_data
@@ -46,132 +45,190 @@ def load_data():
         from sklearn.datasets import load_diabetes
         data = load_diabetes(as_frame=True)
         df = data.frame.copy()
-        # Create a synthetic binary outcome for classification
+        # Create a synthetic binary outcome for classification (1 = Death, 0 = Survival)
         df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
         df.drop(columns='target', inplace=True)
     return df
 
 df = load_data()
 
-# Activity 1
-if activity == "Activity 1: Scenario":
+# ==========================================
+# ACTIVITY 1
+# ==========================================
+if activity == "Activity 1: Clinical Scenario":
     st.title("Activity 1: Applied Fundamentals of ML")
-    st.info("**Instructions:** Read the scenario below to understand the clinical context of this ML task.")
+    st.info("**Overview:** This section outlines the clinical context of the Deep Learning task.")
     
     st.header("Clinical Scenario")
     st.write("""
-    You are part of a hospital’s clinical analytics team using a **CNN model** to predict **in-hospital mortality** using data from the eICU Collaborative Research Database. The dataset includes patient demographics 
-    and selected lab results such as glucose, creatinine, and potassium.
+    This demo showcases a **1D Convolutional Neural Network (CNN)** designed to predict **in-hospital mortality** using data from the eICU Collaborative Research Database. 
+    
+    The dataset includes patient demographics and selected lab results such as glucose, creatinine, and potassium.
     """)
     
     
-    
-    st.subheader("Task Details")
-    st.write("- **Job Task:** Binary Classification (Predicting 0 for Survival, 1 for Death).")
-    st.write("- **CNN Advantage:** 1D CNNs can identify complex relationships between different lab values and demographics without manual feature engineering.")
 
-# Activity 2 & 3
-elif activity == "Activity 2 & 3: Interactive CNN":
-    st.title("Activity 2 & 3: Training and Metrics")
-    
-    st.success("""
-    **Instructions:** 1. Adjust the **Hyperparameters** in the sidebar.
-    2. Click **'Train Next Fold'** to execute one segment of 5-fold cross-validation.
-    3. Watch the **Training Monitor** in the sidebar to see the CPU hit during training!
+    with st.expander("Explore the Dataset Preview", expanded=True):
+        st.dataframe(df.head(10), use_container_width=True)
+        st.caption("Target Variable: 'Outcome' (0 = Survival, 1 = Death)")
+
+    st.subheader("Task Details")
+    st.markdown("""
+    - **Job Task:** Binary Classification.
+    - **CNN Advantage:** 1D CNNs can identify complex sequential or spatial relationships between different lab values and demographics without requiring extensive manual feature engineering.
     """)
+
+# ==========================================
+# ACTIVITY 2
+# ==========================================
+elif activity == "Activity 2: Base Performance & Accuracy":
+    st.title("Activity 2: Evaluating Base Performance")
+    
+    st.success("**Demo Focus:** Adjust basic hyperparameters and train the model to observe baseline Total Accuracy.")
 
     # Interactive Sidebar for Hyperparameters
     st.sidebar.header("Model Hyperparameters")
-    filt1 = st.sidebar.slider("Conv1D Layer 1 Filters", 16, 64, 32, help="Learns patterns from raw clinical data.")
-    filt2 = st.sidebar.slider("Conv1D Layer 2 Filters", 32, 128, 64, help="Learns complex relationships from the first layer.")
-    drop_val = st.sidebar.slider("Dropout Rate", 0.0, 0.5, 0.3, help="Prevents the model from memorizing the data (overfitting).")
-    lr = st.sidebar.select_slider("Learning Rate", options=[0.01, 0.001, 0.0001], value=0.001)
-
-    if 'cv_results' not in st.session_state:
-        st.session_state.cv_results = []
-    if 'current_fold' not in st.session_state:
-        st.session_state.current_fold = 0
-
+    epochs = st.sidebar.slider("Epochs", 10, 50, 20, help="Number of times the model sees the entire dataset.")
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32, 64], value=16, help="Number of samples processed before the model updates its internal weights.")
+    
     col1, col2 = st.columns([1, 1])
-
+    
     with col1:
-        st.subheader("Dataset Preview")
-        st.dataframe(df.head(10))
-        
-        btn_col1, btn_col2 = st.columns(2)
-        if btn_col1.button("Train Next Fold"):
+        st.subheader("Train the CNN Model")
+        if st.button("Train Single Fold (Quick Test)", help="Trains the model on an 80/20 split of the data to test baseline accuracy."):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
-            kf = KFold(n_splits=5, shuffle=True, random_state=42)
-            folds = list(kf.split(X))
-
-            if st.session_state.current_fold < 5:
-                train_idx, val_idx = folds[st.session_state.current_fold]
-                
-                scaler = StandardScaler()
-                X_train = scaler.fit_transform(X[train_idx]).reshape(len(train_idx), X.shape[1], 1)
-                X_val = scaler.transform(X[val_idx]).reshape(len(val_idx), X.shape[1], 1)
-                y_train, y_val = y[train_idx], y[val_idx]
-
-                # CNN Architecture
-                model = Sequential([
-                    Input(shape=(X.shape[1], 1)),
-                    Conv1D(filt1, kernel_size=2, activation='relu'),
-                    Conv1D(filt2, kernel_size=2, activation='relu'),
-                    Flatten(),
-                    Dense(32, activation='relu'),
-                    Dropout(drop_val),
-                    Dense(1, activation='sigmoid')
-                ])
-                model.compile(optimizer=Adam(lr), loss='binary_crossentropy', metrics=['accuracy'])
-                
-                with st.spinner(f"Training Fold {st.session_state.current_fold + 1}..."):
-                    # The CPU usage will peak here
-                    model.fit(X_train, y_train, epochs=30, batch_size=16, verbose=0)
-                
-                y_pred = (model.predict(X_val, verbose=0) > 0.5).astype(int).flatten()
-                tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
-                
-                st.session_state.cv_results.append({
-                    'Fold': st.session_state.current_fold + 1,
-                    'Accuracy': (tp+tn)/(tp+tn+fp+fn),
-                    'Sensitivity': tp/(tp+fn) if (tp+fn)>0 else 0,
-                    'Specificity': tn/(tn+fp) if (tn+fp)>0 else 0,
-                    'Precision': tp/(tp+fp) if (tp+fp)>0 else 0
-                })
-                st.session_state.current_fold += 1
-                st.rerun()
-            else:
-                st.success("5-Fold Cross Validation Complete.")
-
-        if btn_col2.button("Reset Session"):
-            st.session_state.cv_results = []
-            st.session_state.current_fold = 0
-            st.rerun()
-
+            
+            # Simple split for speed in Activity 2
+            split = int(0.8 * len(X))
+            X_train, X_val = X[:split], X[split:]
+            y_train, y_val = y[:split], y[split:]
+            
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train).reshape(len(X_train), X.shape[1], 1)
+            X_val = scaler.transform(X_val).reshape(len(X_val), X.shape[1], 1)
+            
+            model = Sequential([
+                Input(shape=(X.shape[1], 1)),
+                Conv1D(32, kernel_size=2, activation='relu'),
+                Flatten(),
+                Dense(16, activation='relu'),
+                Dense(1, activation='sigmoid')
+            ])
+            model.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
+            
+            with st.spinner("Training model..."):
+                model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=0)
+            
+            y_pred = (model.predict(X_val, verbose=0) > 0.5).astype(int).flatten()
+            tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
+            acc = (tp+tn)/(tp+tn+fp+fn)
+            
+            st.session_state['act2_acc'] = acc
+            st.session_state['act2_trained'] = True
+            st.success("Training Complete")
+            
     with col2:
-        st.subheader("Performance Metrics")
-        if st.session_state.cv_results:
-            res_df = pd.DataFrame(st.session_state.cv_results).set_index('Fold')
-            st.table(res_df.style.format("{:.3f}"))
+        st.subheader("Results")
+        if st.session_state.get('act2_trained', False):
+            st.metric("Total Accuracy", f"{st.session_state['act2_acc']*100:.1f}%", help="Percentage of overall correct predictions (True Positives + True Negatives).")
             
-            st.write("**Average Metrics Across Folds**")
-            avg_df = res_df.mean().to_frame(name="Value").T
-            st.dataframe(avg_df.style.format("{:.3f}"))
-        else:
-            st.info("No data yet. Click 'Train Next Fold' to begin.")
-            
-        
+            st.warning("**Note on Total Accuracy:** In mortality prediction, classes are often highly imbalanced (e.g., 95% survive, 5% die). If a model simply predicts 'Survival' for everyone, it achieves 95% accuracy but misses 100% of the at-risk patients. Because of this, accuracy is generally an insufficient metric for clinical deployment.")
 
-# Activity 4
-elif activity == "Activity 4: Comparison":
+# ==========================================
+# ACTIVITY 3
+# ==========================================
+elif activity == "Activity 3: Advanced Clinical Metrics":
+    st.title("Activity 3: Sensitivity, Specificity & Precision")
+    
+    st.info("**Demo Focus:** Adjust the **Decision Threshold** below to demonstrate how it shifts the trade-off between Sensitivity (catching deaths) and Specificity (avoiding false alarms).")
+
+    # Interactive threshold mapping
+    threshold = st.slider("Probability Decision Threshold", 0.1, 0.9, 0.5, 0.05, 
+                          help="Lowering the threshold makes the model more sensitive (catches more at-risk patients) but increases false positives.")
+    
+    
+
+    st.subheader("5-Fold Cross Validation Simulation")
+    if st.button("Run Full K-Fold Evaluation", help="Executes a 5-Fold cross validation to gather robust probabilities."):
+        X = df.iloc[:, :-1].values
+        y = df.iloc[:, -1].values
+        kf = KFold(n_splits=5, shuffle=True, random_state=42)
+        
+        results = []
+        progress_bar = st.progress(0)
+        
+        for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X[train_idx]).reshape(len(train_idx), X.shape[1], 1)
+            X_val = scaler.transform(X[val_idx]).reshape(len(val_idx), X.shape[1], 1)
+            y_train, y_val = y[train_idx], y[val_idx]
+            
+            model = Sequential([
+                Input(shape=(X.shape[1], 1)),
+                Conv1D(32, kernel_size=2, activation='relu'),
+                Flatten(),
+                Dense(16, activation='relu'),
+                Dense(1, activation='sigmoid')
+            ])
+            model.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
+            model.fit(X_train, y_train, epochs=15, batch_size=16, verbose=0)
+            
+            # Save probabilities to session state so threshold slider can adjust them live
+            y_prob = model.predict(X_val, verbose=0)
+            st.session_state[f'probs_fold_{fold}'] = (y_val, y_prob)
+            progress_bar.progress((fold + 1) / 5)
+            
+        st.session_state['cv_done'] = True
+        st.success("Evaluation complete. Adjust the threshold slider above to see metrics change live.")
+
+    if st.session_state.get('cv_done', False):
+        metrics_list = []
+        for fold in range(5):
+            y_val, y_prob = st.session_state[f'probs_fold_{fold}']
+            y_pred = (y_prob > threshold).astype(int).flatten()
+            tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
+            
+            metrics_list.append({
+                'Fold': fold + 1,
+                'Sensitivity (Recall)': tp/(tp+fn) if (tp+fn)>0 else 0,
+                'Specificity': tn/(tn+fp) if (tn+fp)>0 else 0,
+                'Precision': tp/(tp+fp) if (tp+fp)>0 else 0
+            })
+            
+        res_df = pd.DataFrame(metrics_list).set_index('Fold')
+        st.dataframe(res_df.style.format("{:.3f}"), use_container_width=True)
+        
+        st.markdown("### Average Performance Across Folds")
+        avg_df = res_df.mean()
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Avg Sensitivity", f"{avg_df['Sensitivity (Recall)']:.3f}", help="True Positive Rate: The proportion of actual deaths we successfully predicted. Crucial for mortality models.")
+        c2.metric("Avg Specificity", f"{avg_df['Specificity']:.3f}", help="True Negative Rate: The proportion of actual survivals we correctly predicted.")
+        c3.metric("Avg Precision", f"{avg_df['Precision']:.3f}", help="Positive Predictive Value: When we predict death, how often are we right?")
+
+# ==========================================
+# ACTIVITY 4
+# ==========================================
+elif activity == "Activity 4: CNN vs Decision Tree":
     st.title("Activity 4: Model Comparison")
-    st.info("**Instructions:** Review the trade-offs between model types for clinical settings.")
     
-    st.subheader("CNN vs. Decision Tree")
-    st.write("""
-    - **Decision Trees:** Highly interpretable. Doctors can follow the logic ('If glucose > 200...').
-    - **CNNs:** Superior performance on high-dimensional data but function as a 'Black Box'.
-    """)
+    st.info("**Demo Focus:** Review the trade-offs between model types for clinical settings.")
     
-    st.warning("Interpretability is often a regulatory requirement in clinical AI deployment.")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### Decision Trees (Previous Model)")
+        st.write("""
+        - **Interpretability:** Highly interpretable. Doctors can easily follow the logic ('If glucose > 200 AND age > 65...').
+        - **Performance:** Often plateaus on highly complex, high-dimensional temporal data.
+        - **Feature Engineering:** Requires significant manual effort from clinicians to create good features.
+        """)
+    with col2:
+        st.markdown("### 1D CNNs (Current Model)")
+        st.write("""
+        - **Interpretability:** Functions as a 'Black Box'. Hard to mathematically explain *why* a specific prediction was made to a patient.
+        - **Performance:** Usually superior on raw, complex datasets. Capable of finding hidden non-linear patterns.
+        - **Feature Engineering:** Learns automatic representations via convolutional filters without manual intervention.
+        """)
+        
+    st.error("**Clinical AI Reality:** Interpretability is often a regulatory requirement in clinical AI deployment. While CNNs may have better overall metrics (like Sensitivity), a hospital might be forced to choose a Decision Tree if they cannot legally or ethically deploy a 'black box' model without explainability features.")
