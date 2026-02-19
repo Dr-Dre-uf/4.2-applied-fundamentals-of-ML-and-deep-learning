@@ -66,9 +66,8 @@ if activity == "Activity 1: Clinical Scenario":
     The dataset includes patient demographics and selected lab results such as glucose, creatinine, and potassium.
     """)
     
-
-[Image of 1D Convolutional Neural Network architecture]
-
+    # Placeholder for image (Uncomment and add path to use)
+    # st.image("cnn_architecture.png", caption="1D Convolutional Neural Network architecture")
     
     st.markdown("### Dataset Class Distribution")
     st.write("Notice the heavy class imbalance. The vast majority of records represent 'Survival'. This will impact how we evaluate the model in later activities.")
@@ -160,6 +159,9 @@ elif activity == "Activity 3: Advanced Clinical Metrics":
     
     st.info("**Demo Focus:** Run the evaluation, then dynamically adjust the **Decision Threshold** to visualize the inverse relationship between Sensitivity and Specificity.")
 
+    # Placeholder for image (Uncomment and add path to use)
+    # st.image("confusion_matrix.png", caption="Confusion matrix for binary classification")
+
     st.subheader("5-Fold Cross Validation Evaluation")
     if st.button("Run Full K-Fold Evaluation", help="Executes a 5-Fold cross validation to gather robust probabilities."):
         X = df.iloc[:, :-1].values
@@ -201,8 +203,13 @@ elif activity == "Activity 3: Advanced Clinical Metrics":
         for fold in range(5):
             y_val, y_prob = st.session_state[f'probs_fold_{fold}']
             y_pred = (y_prob > threshold).astype(int).flatten()
-            tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
             
+            # Handle edge cases where tn, fp, fn, tp might not unpack perfectly if only one class is predicted
+            if len(np.unique(y_val)) > 1:
+                tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
+            else:
+                tn, fp, fn, tp = 0, 0, 0, 0 # Fallback for safety in edge cases
+                
             metrics_list.append({
                 'Sensitivity (Recall)': tp/(tp+fn) if (tp+fn)>0 else 0,
                 'Specificity': tn/(tn+fp) if (tn+fp)>0 else 0,
