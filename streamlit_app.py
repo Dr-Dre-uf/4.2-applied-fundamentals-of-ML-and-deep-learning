@@ -66,9 +66,6 @@ if activity == "Activity 1: Clinical Scenario":
     The dataset includes patient demographics and selected lab results such as glucose, creatinine, and potassium.
     """)
     
-    # Placeholder for image (Uncomment and add path to use)
-    # st.image("cnn_architecture.png", caption="1D Convolutional Neural Network architecture")
-    
     st.markdown("### Dataset Class Distribution")
     st.write("Notice the heavy class imbalance. The vast majority of records represent 'Survival'. This will impact how we evaluate the model in later activities.")
     
@@ -145,7 +142,10 @@ elif activity == "Activity 2: Base Performance & Accuracy":
                 'Train Accuracy': st.session_state['act2_history']['accuracy'],
                 'Val Accuracy': st.session_state['act2_history']['val_accuracy'],
             })
-            st.line_chart(hist_df, help="Notice how accuracy converges over epochs.")
+            
+            # Removed the `help` argument here to fix the TypeError
+            st.line_chart(hist_df)
+            st.caption("Notice how accuracy converges over epochs.")
             
             st.metric("Final Total Accuracy", f"{st.session_state['act2_acc']*100:.1f}%", help="Percentage of overall correct predictions.")
             
@@ -158,9 +158,6 @@ elif activity == "Activity 3: Advanced Clinical Metrics":
     st.title("Activity 3: Sensitivity, Specificity & Precision")
     
     st.info("**Demo Focus:** Run the evaluation, then dynamically adjust the **Decision Threshold** to visualize the inverse relationship between Sensitivity and Specificity.")
-
-    # Placeholder for image (Uncomment and add path to use)
-    # st.image("confusion_matrix.png", caption="Confusion matrix for binary classification")
 
     st.subheader("5-Fold Cross Validation Evaluation")
     if st.button("Run Full K-Fold Evaluation", help="Executes a 5-Fold cross validation to gather robust probabilities."):
@@ -271,6 +268,8 @@ elif activity == "Activity 4: CNN vs Decision Tree":
         '1D CNN': [2, 9, 8]
     }).set_index('Metric')
     
-    st.bar_chart(comp_df, help="A visual representation of model trade-offs. Scored 1-10.")
+    # Removed the `help` argument here to fix the TypeError
+    st.bar_chart(comp_df)
+    st.caption("A visual representation of model trade-offs. Scored 1-10.")
         
     st.error("**Clinical AI Reality:** Interpretability is often a regulatory requirement in clinical AI deployment. While CNNs may have better overall metrics (like Sensitivity), a hospital might be forced to choose a Decision Tree if they cannot legally or ethically deploy a 'black box' model without explainability features.")
