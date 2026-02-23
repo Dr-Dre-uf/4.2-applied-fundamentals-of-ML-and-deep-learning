@@ -20,15 +20,15 @@ def display_system_monitor():
     st.sidebar.markdown("---")
     st.sidebar.subheader("System Monitor")
     c1, c2 = st.sidebar.columns(2)
-    c1.metric("CPU Usage", f"{cpu_percent}%", help="Spikes during the 1D CNN training process as the CPU handles matrix operations.")
-    c2.metric("RAM Footprint", f"{mem_mb:.1f} MB", help="Total memory consumed by the dataset and active neural network model.")
+    c1.metric("CPU Usage", f"{cpu_percent}%", help="Watch this spike during training; it represents the computational cost of the CNN filters.")
+    c2.metric("RAM Footprint", f"{mem_mb:.1f} MB", help="Total memory used by the dataset and the neural network model.")
 
 st.set_page_config(page_title="Applied ML Demo", layout="wide")
 
 # --- TRACK SELECTION ---
 st.sidebar.header("Select Focus Area")
 track = st.sidebar.radio("Track", ["Clinical Science", "Foundational Science"], 
-                         help="Toggle between patient-care outcomes and algorithmic-mechanism analysis.")
+                         help="Clinical focuses on patient care impact; Foundational focuses on algorithmic logic.")
 st.sidebar.markdown("---")
 
 # --- NAVIGATION ---
@@ -37,35 +37,25 @@ activity = st.sidebar.radio("Navigation", [
     "Activity 2: Training and Base Metrics",
     "Activity 3: Evaluation Trade-offs",
     "Activity 4: Strategic Comparison"
-], help="Navigate through the core components of the ML pipeline established in the notebook.")
+], help="Switch between the different phases of the machine learning pipeline.")
 
 display_system_monitor()
 
 @st.cache_data
 def load_data():
     try:
-        # Load local file
         df = pd.read_csv("diabetes.csv")
     except:
-        # Fallback to standard biomedical dataset
         from sklearn.datasets import load_diabetes
         data = load_diabetes(as_frame=True)
         df = data.frame.copy()
         df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
         df.drop(columns='target', inplace=True)
     
-    # CLINICAL LABEL MAPPING for BMI, BP, and S1-S6
     mapping = {
-        'age': 'Age',
-        'sex': 'Sex',
-        'bmi': 'BMI',
-        'bp': 'Blood Pressure (MAP)',
-        's1': 'Total Cholesterol (s1)',
-        's2': 'LDL Cholesterol (s2)',
-        's3': 'HDL Cholesterol (s3)',
-        's4': 'Total/HDL Ratio (s4)',
-        's5': 'Serum Triglycerides (s5)',
-        's6': 'Blood Glucose (s6)'
+        'age': 'Age', 'sex': 'Sex', 'bmi': 'BMI', 'bp': 'Blood Pressure (MAP)',
+        's1': 'Total Cholesterol (s1)', 's2': 'LDL Cholesterol (s2)', 's3': 'HDL Cholesterol (s3)',
+        's4': 'Total/HDL Ratio (s4)', 's5': 'Serum Triglycerides (s5)', 's6': 'Blood Glucose (s6)'
     }
     df.rename(columns=mapping, inplace=True)
     return df
@@ -78,35 +68,37 @@ df = load_data()
 if activity == "Activity 1: Objective and Data":
     st.title("Activity 1: Applied Fundamentals")
     
-    with st.expander("Instructions and Objectives", expanded=True):
-        if track == "Clinical Science":
-            st.write("Examine how clinical features like BMI, BP, and Lab Results (s1-s6) correlate with In-Hospital Mortality.")
-        else:
-            st.write("Analyze the data types and distributions of input features to understand bias and variance.")
+    with st.expander("Activity Guide: How to Use This Page", expanded=True):
+        st.write("1. **Read the Scenario:** Understand the clinical problem we are trying to solve.")
+        st.write("2. **Explore the Distribution:** Check the 'Outcome Distribution' chart to see the mortality rate baseline.")
+        st.write("3. **Compare Features:** Use the dropdown to see how specific lab results (S1-S6) differ between survivors and non-survivors.")
 
     st.header("Project Scenario")
-    # Image placeholder: clinical decision support system architecture
+    
+
+[Image of clinical decision support system architecture]
+
     if track == "Clinical Science":
         st.write("""
-        You are part of a clinical analytics team. Your objective is to use a CNN model to predict in-hospital mortality using demographics 
-        and lab results. The goal is to provide triage support to ICU teams.
+        You are a data scientist in an ICU. Your objective is to build a 1D CNN that identifies patients at high risk of 
+        mortality using vital signs and lab results.
         """)
     else:
         st.write("""
-        This task focuses on using 1D Convolutional Neural Networks for binary classification. 
-        The primary advantage of using a CNN here is its ability to automatically identify non-linear relationships in data arrays.
+        This task demonstrates 1D CNN architecture. The goal is to evaluate the model's ability to learn 
+        from sequential or tabular clinical arrays without manual feature engineering.
         """)
 
     st.markdown("### Interactive Data Exploration")
-    feature_to_view = st.selectbox("Select a Clinical Feature:", df.columns[:-1], 
-                                   help="Select a feature to see how its mean value differs between survivors and mortality cases.")
+    feature_to_view = st.selectbox("Select a Clinical Feature to Analyze:", df.columns[:-1], 
+                                   help="Analyze how this clinical metric correlates with patient outcomes.")
     
     col1, col2 = st.columns([1, 1.5])
     with col1:
         st.markdown("**Outcome Distribution**")
         class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival', 1: 'Death'})
         st.bar_chart(class_counts, color="#FF4B4B")
-        st.caption("Class imbalance: Most cases in the dataset are Survivals.")
+        st.caption("Class imbalance: Most records represent patient survival.")
     with col2:
         st.markdown(f"**Mean {feature_to_view} by Outcome**")
         feature_means = df.groupby('Outcome')[feature_to_view].mean()
@@ -118,19 +110,21 @@ if activity == "Activity 1: Objective and Data":
 elif activity == "Activity 2: Training and Base Metrics":
     st.title("Activity 2: Training and Accuracy")
     
-    with st.expander("Instructions", expanded=True):
-        st.write("Adjust hyperparameters and click Train to observe the baseline Total Accuracy metric.")
+    with st.expander("Activity Guide: How to Train the Model", expanded=True):
+        st.write("1. **Set Parameters:** Use the sidebar sliders to set Epochs (training passes) and Batch Size.")
+        st.write("2. **Train:** Click 'Execute Training' to start the neural network's optimization process.")
+        st.write("3. **Observe:** Watch the performance chart live. Does accuracy keep improving or does it plateau?")
 
     st.sidebar.subheader("Training Parameters")
-    epochs = st.sidebar.slider("Epochs", 5, 50, 20, help="Number of complete passes through the dataset.")
-    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Records processed before a weight update.")
+    epochs = st.sidebar.slider("Epochs", 5, 50, 20, help="More epochs allow the model to learn longer but increase CPU time.")
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Smaller batches make the training more 'granular'.")
 
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
         st.subheader("1D CNN Configuration")
-        # Image placeholder: 1D Convolutional Neural Network architecture
-        if st.button("Execute Training", help="Trains the CNN on 80% of the dataset."):
+        
+        if st.button("Execute Training", help="Starts the automated learning process."):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
             scaler = StandardScaler()
@@ -144,7 +138,7 @@ elif activity == "Activity 2: Training and Base Metrics":
             ])
             model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
             
-            with st.spinner("Training..."):
+            with st.spinner("Training model... Observe the System Monitor in the sidebar!"):
                 history = model.fit(X_scaled, y, epochs=epochs, validation_split=0.2, verbose=0)
             
             st.session_state['act2_history'] = history.history
@@ -152,11 +146,11 @@ elif activity == "Activity 2: Training and Base Metrics":
             
     with col2:
         if 'act2_history' in st.session_state:
-            st.subheader("Performance Over Time")
+            st.subheader("Model Learning Curve")
             st.line_chart(pd.DataFrame(st.session_state['act2_history'])['accuracy'])
-            st.metric("Total Accuracy", f"{st.session_state['act2_history']['accuracy'][-1]:.2%}", 
-                      help="The percentage of correct predictions out of all samples.")
-            st.warning("Notebook Question: Is total accuracy a good evaluation metric for this case?")
+            st.metric("Final Total Accuracy", f"{st.session_state['act2_history']['accuracy'][-1]:.2%}", 
+                      help="The percentage of correct predictions (Survivals + Deaths).")
+            st.warning("Critical Thinking: In this imbalanced dataset, is Total Accuracy a 'safe' metric for doctors to trust?")
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -164,11 +158,13 @@ elif activity == "Activity 2: Training and Base Metrics":
 elif activity == "Activity 3: Evaluation Trade-offs":
     st.title("Activity 3: Advanced Clinical Metrics")
     
-    with st.expander("Instructions", expanded=True):
-        st.write("Run the 5-fold evaluation and adjust the threshold to observe sensitivity and precision.")
+    with st.expander("Activity Guide: How to Evaluate the Model", expanded=True):
+        st.write("1. **Generate Predictions:** Click 'Run 5-Fold Evaluation' to get cross-validated results.")
+        st.write("2. **Adjust Threshold:** Move the slider. Notice how catching more deaths (Sensitivity) often creates more false alarms.")
+        st.write("3. **Analyze:** Look for the 'Sweet Spot' where sensitivity is high enough to be safe without overwhelming the staff.")
 
-    # Image placeholder: confusion matrix for binary classification
-    if st.button("Run 5-Fold Evaluation", help="Performs cross-validation to assess model stability across data segments."):
+    
+    if st.button("Run 5-Fold Evaluation", help="Runs the model 5 separate times on different data slices for statistical rigor."):
         X = df.iloc[:, :-1].values
         y = df.iloc[:, -1].values
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -187,11 +183,11 @@ elif activity == "Activity 3: Evaluation Trade-offs":
             results.append((y[val_idx], y_prob))
         
         st.session_state['act3_results'] = results
-        st.success("Evaluation Complete")
+        st.success("Full Evaluation Generated")
 
     if 'act3_results' in st.session_state:
-        threshold = st.slider("Classification Threshold", 0.1, 0.9, 0.5, 
-                              help="Shifting the threshold changes the balance between Sensitivity and Specificity.")
+        threshold = st.slider("Classification Sensitivity Threshold", 0.1, 0.9, 0.5, 
+                              help="Lowering this makes the model 'cautious' (picks up more deaths); Raising it makes it 'strict'.")
         
         metrics = []
         for y_true, y_prob in st.session_state['act3_results']:
@@ -201,44 +197,33 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         
         avg_m = np.mean(metrics, axis=0)
         c1, c2, c3 = st.columns(3)
-        c1.metric("Sensitivity (Recall)", f"{avg_m[0]:.3f}", help="Ability to correctly identify patients who died.")
-        c2.metric("Specificity", f"{avg_m[1]:.3f}", help="Ability to correctly identify patients who survived.")
-        c3.metric("Precision", f"{avg_m[2]:.3f}", help="How many 'Death' predictions were actually correct.")
+        c1.metric("Sensitivity (Recall)", f"{avg_m[0]:.3f}", help="What % of all deaths did we successfully flag?")
+        c2.metric("Specificity", f"{avg_m[1]:.3f}", help="What % of all survivors did we successfully identify?")
+        c3.metric("Precision", f"{avg_m[2]:.3f}", help="When we flag a death, how often are we actually correct?")
 
 # ==========================================
 # ACTIVITY 4: STRATEGIC COMPARISON
 # ==========================================
 elif activity == "Activity 4: Strategic Comparison":
-    st.title("Activity 4: Model Comparison")
+    st.title("Activity 4: Model Strategy")
     
-    with st.expander("Instructions", expanded=True):
-        st.write("Compare the 1D CNN results with the Milestone 1 Decision Tree.")
+    with st.expander("Activity Guide: Final Assessment", expanded=True):
+        st.write("1. **Compare Models:** Review the visual differences between Trees and CNNs.")
+        st.write("2. **Select Priority:** Move the slider to reflect your specific deployment goals.")
+        st.write("3. **Final Decision:** Use the recommendation to decide which model to implement in your ICU.")
 
-    # Image placeholder: decision tree vs neural network architecture
-    st.subheader("Model Comparison Matrix")
+    [Image comparing decision tree architecture to neural network architecture]
+    st.subheader("Decision Matrix")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Decision Tree (Milestone 1)**")
-        st.write("- Logic: Interpretable 'If-Then' branches.")
-        st.write("- Transparency: High (White Box).")
-    with col2:
-        st.markdown("**1D CNN (Current Model)**")
-        st.write("- Logic: Complex non-linear filters.")
-        st.write("- Transparency: Low (Black Box).")
-
-    st.markdown("---")
-    
-    st.subheader("Interactive Strategy Selector")
-    priority = st.select_slider("What is the hospital's priority?", options=["Interpretability", "Balanced", "Performance"], 
-                                help="Selecting Performance favors the CNN; Interpretability favors the Decision Tree.")
+    priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"], 
+                                help="Interpretability favors Trees; Performance favors CNNs.")
     
     if priority == "Interpretability":
-        st.info("Strategy Recommendation: Deploy the Decision Tree.")
+        st.info("Strategy: Use the Decision Tree. It is critical that clinicians understand the exact 'If-Then' logic.")
     elif priority == "Performance":
-        st.success("Strategy Recommendation: Deploy the 1D CNN.")
+        st.success("Strategy: Use the 1D CNN. Raw detection power is the highest priority for patient safety.")
     else:
-        st.warning("Strategy Recommendation: Use a hybrid model or model-explainability tools.")
+        st.warning("Strategy: Hybrid approach. Use the CNN for detection and a Decision Tree for explaining the results.")
         
     st.bar_chart(pd.DataFrame({
         'Metric': ['Interpretability', 'Raw Performance', 'Automation'],
