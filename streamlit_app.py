@@ -62,8 +62,12 @@ if activity == "Activity 1: Data Exploration":
     
     if track == "Clinical Science":
         st.info("Clinical Focus: Understand the patient population and the prevalence of mortality within the ICU dataset to inform triage strategies.")
+        # Placeholder for clinical architecture image
+        # st.image("clinical_architecture.png", caption="Clinical decision support system architecture")
     else:
         st.info("Foundational Focus: Analyze the statistical distribution and class imbalance of the dataset to anticipate how it will affect the neural network's loss function.")
+        # Placeholder for 1D CNN architecture image
+        # st.image("cnn_architecture.png", caption="1D Convolutional Neural Network architecture")
     
     st.markdown("### Dataset Class Distribution")
     class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
@@ -91,12 +95,6 @@ elif activity == "Activity 2: Base Performance":
     
     with col1:
         st.subheader("Train the 1D CNN Model")
-        if track == "Foundational Science":
-            # Just to show the image in the foundational track
-            pass # 
-
-[Image of 1D Convolutional Neural Network architecture]
-
             
         if st.button("Train Single Fold"):
             X = df.iloc[:, :-1].values
