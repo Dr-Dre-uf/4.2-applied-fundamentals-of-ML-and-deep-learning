@@ -69,10 +69,7 @@ if activity == "Activity 1: Objective and Data":
         """)
 
     st.header("Project Scenario")
-    # 
-
-[Image of clinical decision support system architecture]
-
+    # Image placeholder: clinical decision support system architecture
     st.write("""
     This demo uses a **1D CNN model** to predict mortality using patient demographics and lab results. 
     Unlike traditional models, the **advantage of using a CNN** here is its ability to identify complex 
@@ -89,7 +86,7 @@ if activity == "Activity 1: Objective and Data":
         st.bar_chart(class_counts, color="#FF4B4B")
     with col2:
         st.markdown(f"**Average {feature_to_view} by Outcome**")
-        feature_means = df.groupby('Outcome')[feature_to_plot if 'feature_to_plot' in locals() else feature_to_view].mean()
+        feature_means = df.groupby('Outcome')[feature_to_view].mean()
         st.bar_chart(feature_means)
 
 # ==========================================
@@ -99,18 +96,17 @@ elif activity == "Activity 2: Training and Base Metrics":
     st.title("Activity 2: Training the Neural Network")
     
     with st.expander("Instructions", expanded=True):
-        st.write("Adjust hyperparameters in the sidebar and click Train to observe initial accuracy.")
+        st.write("Adjust hyperparameters in the sidebar and click Execute Training to observe initial accuracy.")
 
-    # Sidebar controls moved here for demo focus
     st.sidebar.subheader("Training Parameters")
-    epochs = st.sidebar.slider("Epochs", 5, 50, 10, help="Number of training passes.")
-    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Samples per gradient update.")
+    epochs = st.sidebar.slider("Epochs", 5, 50, 10, help="Number of training passes through the dataset.")
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Samples processed per gradient update.")
 
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
         st.subheader("1D CNN Configuration")
-        # 
+        # Image placeholder: 1D Convolutional Neural Network architecture
         if st.button("Execute Training", help="Trains the 1D CNN on the clinical dataset."):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
@@ -146,9 +142,9 @@ elif activity == "Activity 3: Evaluation Trade-offs":
     st.title("Activity 3: Clinical Performance Evaluation")
     
     with st.expander("Instructions", expanded=True):
-        st.write("Run the cross-validation and adjust the threshold to see how Sensitivity and Specificity react.")
+        st.write("Run the evaluation and adjust the threshold to see how Sensitivity and Specificity react.")
 
-    # 
+    # Image placeholder: confusion matrix for binary classification
     if st.button("Run 5-Fold Evaluation", help="Calculates cross-validated performance metrics."):
         X = df.iloc[:, :-1].values
         y = df.iloc[:, -1].values
@@ -195,7 +191,7 @@ elif activity == "Activity 4: Strategic Comparison":
     with st.expander("Strategic Goal", expanded=True):
         st.write("Analyze whether the CNN performance is superior to the Milestone 1 Decision Tree and why.")
 
-    # [Image comparing decision tree architecture to neural network architecture]
+    # Image placeholder: decision tree vs neural network visual logic
     st.subheader("Model Comparison Matrix")
     
     col1, col2 = st.columns(2)
