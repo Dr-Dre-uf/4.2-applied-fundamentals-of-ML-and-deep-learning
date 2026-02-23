@@ -52,6 +52,7 @@ def load_data():
         df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
         df.drop(columns='target', inplace=True)
     
+    # CLINICAL LABEL MAPPING for BMI, BP, and S1-S6
     mapping = {
         'age': 'Age', 'sex': 'Sex', 'bmi': 'BMI', 'bp': 'Blood Pressure (MAP)',
         's1': 'Total Cholesterol (s1)', 's2': 'LDL Cholesterol (s2)', 's3': 'HDL Cholesterol (s3)',
@@ -71,13 +72,10 @@ if activity == "Activity 1: Objective and Data":
     with st.expander("Activity Guide: How to Use This Page", expanded=True):
         st.write("1. **Read the Scenario:** Understand the clinical problem we are trying to solve.")
         st.write("2. **Explore the Distribution:** Check the 'Outcome Distribution' chart to see the mortality rate baseline.")
-        st.write("3. **Compare Features:** Use the dropdown to see how specific lab results (S1-S6) differ between survivors and non-survivors.")
+        st.write("3. **Compare Features:** Use the dropdown to see how specific lab results (BMI, BP, S1-S6) differ between survivors and non-survivors.")
 
     st.header("Project Scenario")
-    
-
-[Image of clinical decision support system architecture]
-
+    # Placeholder for image: 
     if track == "Clinical Science":
         st.write("""
         You are a data scientist in an ICU. Your objective is to build a 1D CNN that identifies patients at high risk of 
@@ -111,19 +109,19 @@ elif activity == "Activity 2: Training and Base Metrics":
     st.title("Activity 2: Training and Accuracy")
     
     with st.expander("Activity Guide: How to Train the Model", expanded=True):
-        st.write("1. **Set Parameters:** Use the sidebar sliders to set Epochs (training passes) and Batch Size.")
+        st.write("1. **Set Parameters:** Use the sidebar sliders to set Epochs and Batch Size.")
         st.write("2. **Train:** Click 'Execute Training' to start the neural network's optimization process.")
         st.write("3. **Observe:** Watch the performance chart live. Does accuracy keep improving or does it plateau?")
 
     st.sidebar.subheader("Training Parameters")
     epochs = st.sidebar.slider("Epochs", 5, 50, 20, help="More epochs allow the model to learn longer but increase CPU time.")
-    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Smaller batches make the training more 'granular'.")
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Smaller batches make training more granular.")
 
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
         st.subheader("1D CNN Configuration")
-        
+        # Placeholder for image: 
         if st.button("Execute Training", help="Starts the automated learning process."):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
@@ -150,7 +148,7 @@ elif activity == "Activity 2: Training and Base Metrics":
             st.line_chart(pd.DataFrame(st.session_state['act2_history'])['accuracy'])
             st.metric("Final Total Accuracy", f"{st.session_state['act2_history']['accuracy'][-1]:.2%}", 
                       help="The percentage of correct predictions (Survivals + Deaths).")
-            st.warning("Critical Thinking: In this imbalanced dataset, is Total Accuracy a 'safe' metric for doctors to trust?")
+            st.warning("Note: In imbalanced mortality data, high accuracy can be misleading.")
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -161,10 +159,10 @@ elif activity == "Activity 3: Evaluation Trade-offs":
     with st.expander("Activity Guide: How to Evaluate the Model", expanded=True):
         st.write("1. **Generate Predictions:** Click 'Run 5-Fold Evaluation' to get cross-validated results.")
         st.write("2. **Adjust Threshold:** Move the slider. Notice how catching more deaths (Sensitivity) often creates more false alarms.")
-        st.write("3. **Analyze:** Look for the 'Sweet Spot' where sensitivity is high enough to be safe without overwhelming the staff.")
+        st.write("3. **Analyze:** Look for the 'Sweet Spot' between sensitivity and specificity.")
 
-    
-    if st.button("Run 5-Fold Evaluation", help="Runs the model 5 separate times on different data slices for statistical rigor."):
+    # Placeholder for image: 
+    if st.button("Run 5-Fold Evaluation", help="Runs the model 5 separate times on different data slices for rigor."):
         X = df.iloc[:, :-1].values
         y = df.iloc[:, -1].values
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -210,20 +208,20 @@ elif activity == "Activity 4: Strategic Comparison":
     with st.expander("Activity Guide: Final Assessment", expanded=True):
         st.write("1. **Compare Models:** Review the visual differences between Trees and CNNs.")
         st.write("2. **Select Priority:** Move the slider to reflect your specific deployment goals.")
-        st.write("3. **Final Decision:** Use the recommendation to decide which model to implement in your ICU.")
+        st.write("3. **Final Decision:** Compare Interpretability vs Performance.")
 
-    [Image comparing decision tree architecture to neural network architecture]
+    # Placeholder for image: [Image comparing decision tree architecture to neural network architecture]
     st.subheader("Decision Matrix")
     
     priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"], 
                                 help="Interpretability favors Trees; Performance favors CNNs.")
     
     if priority == "Interpretability":
-        st.info("Strategy: Use the Decision Tree. It is critical that clinicians understand the exact 'If-Then' logic.")
+        st.info("Strategy: Use the Decision Tree. Clinician trust relies on understanding the exact 'If-Then' logic.")
     elif priority == "Performance":
         st.success("Strategy: Use the 1D CNN. Raw detection power is the highest priority for patient safety.")
     else:
-        st.warning("Strategy: Hybrid approach. Use the CNN for detection and a Decision Tree for explaining the results.")
+        st.warning("Strategy: Hybrid approach required.")
         
     st.bar_chart(pd.DataFrame({
         'Metric': ['Interpretability', 'Raw Performance', 'Automation'],
