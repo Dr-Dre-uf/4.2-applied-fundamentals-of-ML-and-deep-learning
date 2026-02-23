@@ -62,7 +62,7 @@ if activity == "Activity 1: Data Exploration":
     
     with st.expander("Activity Instructions", expanded=True):
         st.write("1. Review the dataset class distribution to understand the mortality rate baseline.")
-        st.write("2. Use the interactive dropdown to explore how different features (like BMI, Blood Pressure) correlate visually with the outcome.")
+        st.write("2. Use the interactive dropdown to explore how different features correlate visually with the outcome.")
         st.write("3. Review the raw data table to understand the structure of the arrays feeding into the model.")
 
     if track == "Clinical Science":
@@ -74,7 +74,7 @@ if activity == "Activity 1: Data Exploration":
     
     with col1:
         st.markdown("### Dataset Class Distribution")
-        st.markdown("")
+        # 
         class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(class_counts, color="#FF4B4B")
         st.caption("Notice the heavy class imbalance (majority are Survivals).")
@@ -83,7 +83,6 @@ if activity == "Activity 1: Data Exploration":
         st.markdown("### Interactive Feature Exploration")
         feature_to_plot = st.selectbox("Select a Feature:", df.columns[:-1], help="Choose a clinical feature to visualize its distribution across survival and death outcomes.")
         
-        # Group by outcome and calculate the mean of the selected feature
         feature_means = df.groupby('Outcome')[feature_to_plot].mean().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(feature_means)
         st.caption(f"Average {feature_to_plot} categorized by patient outcome.")
@@ -104,15 +103,15 @@ elif activity == "Activity 2: Base Performance":
         st.write("4. Consider why Total Accuracy might be a misleading metric here.")
 
     st.sidebar.header("Model Hyperparameters")
-    epochs = st.sidebar.slider("Epochs", 10, 50, 20, help="How many times the model will pass through the entire training dataset.")
-    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32, 64], value=16, help="How many patient records the model processes before updating its internal weights.")
+    epochs = st.sidebar.slider("Epochs", 10, 50, 20)
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32, 64], value=16)
     
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
         st.subheader("Train the 1D CNN Model")
             
-        if st.button("Train Single Fold", help="Initializes model weights and trains on an 80/20 train/validation split."):
+        if st.button("Train Single Fold"):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
             
@@ -133,7 +132,7 @@ elif activity == "Activity 2: Base Performance":
             ])
             model.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
             
-            with st.spinner("Training model... Check the system monitor!"):
+            with st.spinner("Training model..."):
                 history = model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=epochs, batch_size=batch_size, verbose=0)
             
             y_pred = (model.predict(X_val, verbose=0) > 0.5).astype(int).flatten()
@@ -146,10 +145,10 @@ elif activity == "Activity 2: Base Performance":
             st.success("Training Complete!")
             
         with st.expander("View Network Architecture"):
-            st.markdown("
+            # 
 
 [Image of 1D Convolutional Neural Network architecture]
-")
+
             st.code("""
 Sequential([
   Input(shape=(Features, 1)),
@@ -169,12 +168,12 @@ Sequential([
             })
             
             st.line_chart(hist_df)
-            st.metric("Final Total Accuracy", f"{st.session_state['act2_acc']*100:.1f}%", help="The total percentage of correct predictions (Survivals AND Deaths).")
+            st.metric("Final Total Accuracy", f"{st.session_state['act2_acc']*100:.1f}%")
             
             if track == "Clinical Science":
-                st.warning("Clinical Context: A model that simply predicts 'Survival' for everyone will achieve high total accuracy but miss 100% of the at-risk patients. Accuracy alone is an insufficient metric for clinical deployment.")
+                st.warning("Clinical Context: A model that simply predicts 'Survival' for everyone will achieve high total accuracy but miss 100% of the at-risk patients.")
             else:
-                st.warning("Foundational Context: Due to the imbalanced prior probabilities of the classes, global accuracy masks the model's inability to establish a proper decision boundary for the minority class.")
+                st.warning("Foundational Context: Global accuracy masks the model's inability to establish a proper decision boundary for the minority class.")
 
 # ==========================================
 # ACTIVITY 3
@@ -185,16 +184,10 @@ elif activity == "Activity 3: Advanced Metrics":
     with st.expander("Activity Instructions", expanded=True):
         st.write("1. Click 'Run Full K-Fold Evaluation' to generate rigorous cross-validated predictions.")
         st.write("2. Once complete, slide the 'Probability Decision Threshold' left and right.")
-        st.write("3. Watch how changing the threshold shifts the predictions in the Dynamic Confusion Matrix below.")
-        st.write("4. Observe the inverse relationship between Sensitivity (catching deaths) and Specificity (catching survivals).")
-
-    if track == "Clinical Science":
-        st.info("Adjust the threshold to balance catching at-risk patients (Sensitivity) against burdening staff with false alarms (Specificity).")
-    else:
-        st.info("Adjust the decision threshold to observe the mathematical trade-off in the confusion matrix space (Recall vs Precision/Specificity).")
+        st.write("3. Watch how changing the threshold shifts the predictions in the metrics below.")
 
     st.subheader("5-Fold Cross Validation Evaluation")
-    if st.button("Run Full K-Fold Evaluation", help="Executes a 5-Fold cross validation to gather robust probabilities."):
+    if st.button("Run Full K-Fold Evaluation"):
         X = df.iloc[:, :-1].values
         y = df.iloc[:, -1].values
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -226,7 +219,7 @@ elif activity == "Activity 3: Advanced Metrics":
 
     if st.session_state.get('cv_done', False):
         st.markdown("---")
-        threshold = st.slider("Probability Decision Threshold", 0.05, 0.95, 0.50, 0.05, help="Lowering the threshold makes the model more 'sensitive' but increases false positives.")
+        threshold = st.slider("Probability Decision Threshold", 0.05, 0.95, 0.50, 0.05)
         
         metrics_list = []
         tn_total, fp_total, fn_total, tp_total = 0, 0, 0, 0
@@ -253,26 +246,24 @@ elif activity == "Activity 3: Advanced Metrics":
             
         avg_df = pd.DataFrame(metrics_list).mean()
         
-        st.markdown("### Interactive Confusion Matrix (Total across all folds)")
-        st.markdown("")
+        st.markdown("### Metrics Summary")
+        # 
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("True Negatives (TN)", tn_total, help="Correctly predicted Survivals.")
-        c2.metric("False Positives (FP)", fp_total, help="Incorrectly predicted Deaths (False Alarms).")
-        c3.metric("False Negatives (FN)", fn_total, help="Incorrectly predicted Survivals (Missed at-risk patients!).")
-        c4.metric("True Positives (TP)", tp_total, help="Correctly predicted Deaths.")
+        c1.metric("True Negatives (TN)", tn_total)
+        c2.metric("False Positives (FP)", fp_total)
+        c3.metric("False Negatives (FN)", fn_total)
+        c4.metric("True Positives (TP)", tp_total)
         
         st.markdown("---")
         
         col1, col2 = st.columns([1, 1.5])
         
         with col1:
-            st.markdown("### Trade-off Metrics")
-            st.metric("Avg Sensitivity (Recall)", f"{avg_df['Sensitivity (Recall)']:.3f}", help="TPR: Proportion of actual deaths we successfully predicted.")
-            st.metric("Avg Specificity", f"{avg_df['Specificity']:.3f}", help="TNR: Proportion of actual survivals we correctly predicted.")
-            st.metric("Avg Precision", f"{avg_df['Precision']:.3f}", help="PPV: When we predict death, how often are we right?")
+            st.metric("Avg Sensitivity (Recall)", f"{avg_df['Sensitivity (Recall)']:.3f}")
+            st.metric("Avg Specificity", f"{avg_df['Specificity']:.3f}")
+            st.metric("Avg Precision", f"{avg_df['Precision']:.3f}")
             
         with col2:
-            st.markdown("### Visual Metrics Comparison")
             chart_data = pd.DataFrame({
                 "Score": [avg_df['Sensitivity (Recall)'], avg_df['Specificity'], avg_df['Precision']]
             }, index=["Sensitivity", "Specificity", "Precision"])
@@ -285,60 +276,47 @@ elif activity == "Activity 4: Model Comparison":
     st.title("Activity 4: CNN vs Decision Tree")
     
     with st.expander("Activity Instructions", expanded=True):
-        st.write("1. Review the conceptual differences between the models.")
-        st.write("2. Use the interactive 'Decision Tool' below to determine which model to deploy based on your priorities.")
+        st.write("Determine which model to deploy based on your priorities.")
     
-    st.markdown("[Image comparing decision tree architecture to neural network architecture]")
+    # 
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("### Decision Trees (Milestone 1)")
+        st.markdown("### Decision Trees")
         if track == "Clinical Science":
-            st.write("- **Interpretability:** Highly interpretable. Doctors can easily follow the clinical logic.")
-            st.write("- **Adoption:** Easier to get approved by hospital review boards.")
+            st.write("- **Interpretability:** High. Logic is easy to follow.")
         else:
-            st.write("- **Architecture:** Partitions feature space using orthogonal decision boundaries.")
-            st.write("- **Feature Engineering:** Requires manual feature creation to capture complex interactions.")
+            st.write("- **Architecture:** Orthogonal decision boundaries.")
             
     with col2:
-        st.markdown("### 1D CNNs (Current Model)")
+        st.markdown("### 1D CNNs")
         if track == "Clinical Science":
-            st.write("- **Interpretability:** Functions as a 'Black Box'. Hard to mathematically explain the prediction to a patient.")
-            st.write("- **Adoption:** Strict regulatory hurdles for clinical AI deployment.")
+            st.write("- **Interpretability:** Low (Black Box).")
         else:
-            st.write("- **Architecture:** Uses convolutional filters to extract high-dimensional representations automatically.")
-            st.write("- **Feature Engineering:** Learns non-linear patterns directly from raw data arrays.")
+            st.write("- **Architecture:** Automated high-dimensional feature extraction.")
     
     st.markdown("---")
     
     st.subheader("Interactive Model Selection Tool")
-    st.write("Adjust the sliders below based on your current project's constraints:")
+    weight_perf = st.slider("Importance of Raw Performance", 1, 10, 5)
+    weight_interp = st.slider("Importance of Interpretability", 1, 10, 5)
     
-    weight_perf = st.slider("Importance of Raw Performance (Accuracy/Sensitivity)", 1, 10, 5, help="How critical is maximizing the detection rate?")
-    weight_interp = st.slider("Importance of Interpretability (Explainability)", 1, 10, 5, help="How critical is it that a human can read the algorithm's logic?")
-    
-    # Simple logic to determine recommendation
     dt_score = (5 * weight_perf) + (9 * weight_interp)
     cnn_score = (9 * weight_perf) + (2 * weight_interp)
     
     if cnn_score > dt_score:
-        st.success(f"**Recommendation: 1D CNN** (CNN Score: {cnn_score} vs DT Score: {dt_score})")
-        st.write("Your high priority on raw performance makes the Deep Learning approach the best choice, assuming regulatory constraints allow it.")
+        st.success(f"Recommendation: 1D CNN (Score: {cnn_score})")
     elif dt_score > cnn_score:
-        st.info(f"**Recommendation: Decision Tree** (DT Score: {dt_score} vs CNN Score: {cnn_score})")
-        st.write("Your high priority on interpretability means the Decision Tree is the safer, more appropriate choice for this deployment.")
+        st.info(f"Recommendation: Decision Tree (Score: {dt_score})")
     else:
-        st.warning(f"**Recommendation: Tied!** (Score: {cnn_score})")
-        st.write("You must evaluate trade-offs manually based on strict hospital/organizational guidelines.")
+        st.warning("Recommendation: Tied!")
         
     st.markdown("---")
     
     comp_df = pd.DataFrame({
-        'Metric': ['Interpretability', 'Raw Performance', 'Automated Feature Extraction'],
+        'Metric': ['Interpretability', 'Raw Performance', 'Automated Extraction'],
         'Decision Tree': [9, 5, 2],
         '1D CNN': [2, 9, 8]
     }).set_index('Metric')
     
-    st.markdown("### Comparative Scoring Matrix")
     st.bar_chart(comp_df)
-    st.caption("A visual representation of model trade-offs. Scored 1-10.")
