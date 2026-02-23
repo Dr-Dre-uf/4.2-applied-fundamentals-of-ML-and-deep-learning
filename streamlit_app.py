@@ -66,9 +66,9 @@ if activity == "Activity 1: Data Exploration":
         st.write("3. Review the raw data table to understand the structure of the arrays feeding into the model.")
 
     if track == "Clinical Science":
-        st.info("Clinical Focus: Understand the patient population and the prevalence of mortality within the ICU dataset to inform triage strategies.")
+        st.info("Clinical Focus: Understand the patient population and the prevalence of mortality within the ICU dataset.")
     else:
-        st.info("Foundational Focus: Analyze the statistical distribution and class imbalance of the dataset to anticipate how it will affect the neural network's loss function.")
+        st.info("Foundational Focus: Analyze the statistical distribution and class imbalance of the dataset.")
     
     col1, col2 = st.columns([1, 1.5])
     
@@ -81,7 +81,7 @@ if activity == "Activity 1: Data Exploration":
         
     with col2:
         st.markdown("### Interactive Feature Exploration")
-        feature_to_plot = st.selectbox("Select a Feature:", df.columns[:-1], help="Choose a clinical feature to visualize its distribution across survival and death outcomes.")
+        feature_to_plot = st.selectbox("Select a Feature:", df.columns[:-1], help="Visualize its distribution across survival and death.")
         
         feature_means = df.groupby('Outcome')[feature_to_plot].mean().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(feature_means)
@@ -98,9 +98,8 @@ elif activity == "Activity 2: Base Performance":
     
     with st.expander("Activity Instructions", expanded=True):
         st.write("1. Adjust the Epochs and Batch Size in the sidebar.")
-        st.write("2. Click 'Train Single Fold' to train the 1D CNN on 80% of the data.")
-        st.write("3. Watch the Training Metrics chart populate live as the model learns.")
-        st.write("4. Consider why Total Accuracy might be a misleading metric here.")
+        st.write("2. Click 'Train Single Fold' to train the 1D CNN.")
+        st.write("3. Watch the Training Metrics chart populate live.")
 
     st.sidebar.header("Model Hyperparameters")
     epochs = st.sidebar.slider("Epochs", 10, 50, 20)
@@ -169,11 +168,6 @@ Sequential([
             
             st.line_chart(hist_df)
             st.metric("Final Total Accuracy", f"{st.session_state['act2_acc']*100:.1f}%")
-            
-            if track == "Clinical Science":
-                st.warning("Clinical Context: A model that simply predicts 'Survival' for everyone will achieve high total accuracy but miss 100% of the at-risk patients.")
-            else:
-                st.warning("Foundational Context: Global accuracy masks the model's inability to establish a proper decision boundary for the minority class.")
 
 # ==========================================
 # ACTIVITY 3
@@ -182,9 +176,8 @@ elif activity == "Activity 3: Advanced Metrics":
     st.title("Activity 3: Trade-off Metrics")
     
     with st.expander("Activity Instructions", expanded=True):
-        st.write("1. Click 'Run Full K-Fold Evaluation' to generate rigorous cross-validated predictions.")
-        st.write("2. Once complete, slide the 'Probability Decision Threshold' left and right.")
-        st.write("3. Watch how changing the threshold shifts the predictions in the metrics below.")
+        st.write("1. Click 'Run Full K-Fold Evaluation'.")
+        st.write("2. Once complete, slide the 'Probability Decision Threshold'.")
 
     st.subheader("5-Fold Cross Validation Evaluation")
     if st.button("Run Full K-Fold Evaluation"):
