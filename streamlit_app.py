@@ -69,22 +69,8 @@ if activity == "Activity 1: Objective and Data":
     st.title("Activity 1: Applied Fundamentals")
     
     with st.expander("Activity Guide: How to Use This Page", expanded=True):
-        st.write("1. **Read the Scenario:** Understand the clinical problem we are trying to solve.")
-        st.write("2. **Explore the Distribution:** Check the 'Outcome Distribution' chart to see the mortality rate baseline.")
-        st.write("3. **Compare Features:** Use the dropdown to see how specific features differ between outcomes.")
-
-    st.header("Project Scenario")
-    if track == "Clinical Science":
-        st.write("""
-        You are part of a hospital’s clinical analytics team using a **DNN model** to predict in-hospital mortality 
-        using data from the eICU Collaborative Research Database. The dataset includes patient demographics and 
-        selected lab results such as glucose, creatinine, and potassium.
-        """)
-    else:
-        st.write("""
-        This task focuses on using a Deep Neural Network (DNN) for binary classification. The primary advantage of a DNN 
-        is its ability to learn complex, non-linear relationships through multiple hidden layers and Dropout regularization.
-        """)
+        st.write("1. **Explore the Distribution:** Check the 'Outcome Distribution' chart to see the mortality rate baseline.")
+        st.write("2. **Compare Features:** Use the dropdown to see how specific features differ between outcomes.")
 
     st.markdown("### Interactive Data Exploration")
     feature_to_view = st.selectbox("Select a Clinical Feature to Analyze:", df.columns[:-1], 
@@ -95,11 +81,15 @@ if activity == "Activity 1: Objective and Data":
         st.markdown("**Outcome Distribution**")
         class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(class_counts, color="#FF4B4B")
-        st.caption("Class imbalance: Most records represent patient survival.")
+        # ADA Compliance: Screen reader accessible text summary of the chart
+        st.write(f"**Data Summary:** There are {class_counts.iloc[0]} Survival records and {class_counts.iloc[1]} Death records. This represents a significant class imbalance.")
+        
     with col2:
         st.markdown(f"**Mean {feature_to_view} by Outcome**")
         feature_means = df.groupby('Outcome')[feature_to_view].mean()
         st.bar_chart(feature_means)
+        # ADA Compliance: Screen reader accessible text summary of the chart
+        st.write(f"**Data Summary:** The average {feature_to_view} for Survivors is {feature_means.iloc[0]:.2f}, while the average for Deaths is {feature_means.iloc[1]:.2f}.")
 
 # ==========================================
 # ACTIVITY 2: TRAINING AND BASE METRICS
@@ -120,19 +110,16 @@ elif activity == "Activity 2: Training and Base Metrics":
     
     with col1:
         st.subheader("DNN Configuration")
-        st.code("""
-        model = Sequential([
-            Input(shape=(X.shape[1],)),
-            Dense(128, activation='relu'),
-            Dropout(0.3),
-            Dense(64, activation='relu'),
-            Dropout(0.2),
-            Dense(32, activation='relu'),
-            Dense(1, activation='sigmoid')
-        ])
-        """, language='python')
+        st.markdown("""
+        **Network Architecture:**
+        * **Input Layer:** Receives the scaled clinical features.
+        * **Hidden Layer 1:** 128 nodes (ReLU activation) with 30% Dropout to prevent overfitting.
+        * **Hidden Layer 2:** 64 nodes (ReLU activation) with 20% Dropout.
+        * **Hidden Layer 3:** 32 nodes (ReLU activation) to refine the learned representations.
+        * **Output Layer:** 1 node (Sigmoid activation) to output a binary classification probability.
+        """)
         
-        if st.button("Execute Training"):
+        if st.button("Execute Training", help="Click to train the Deep Neural Network."):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
             scaler = StandardScaler()
@@ -159,20 +146,25 @@ elif activity == "Activity 2: Training and Base Metrics":
         if 'act2_history' in st.session_state:
             st.subheader("Model Learning Curve")
             st.line_chart(pd.DataFrame(st.session_state['act2_history'])['accuracy'])
-            st.metric("Final Total Accuracy", f"{st.session_state['act2_history']['accuracy'][-1]:.2%}")
+            
+            final_acc = st.session_state['act2_history']['accuracy'][-1]
+            st.metric("Final Total Accuracy", f"{final_acc:.2%}", help="The overall percentage of correct predictions.")
+            
+            # ADA Compliance Summary
+            st.write(f"**Data Summary:** The model achieved a final global training accuracy of {final_acc:.2%}.")
             st.warning("Notebook Question: Is total accuracy a good evaluation metric for this case?")
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
 # ==========================================
-elif activity == "Activity 3: Advanced Clinical Metrics":
+elif activity == "Activity 3: Evaluation Trade-offs":
     st.title("Activity 3: Advanced Clinical Metrics")
     
     with st.expander("Activity Guide: How to Evaluate the Model", expanded=True):
         st.write("1. **Generate Predictions:** Click 'Run 5-Fold Evaluation'.")
         st.write("2. **Adjust Threshold:** Move the slider to shift the balance between Sensitivity and Specificity.")
 
-    if st.button("Run 5-Fold Evaluation"):
+    if st.button("Run 5-Fold Evaluation", help="Execute 5-fold cross-validation to rigorously test the model."):
         X = df.iloc[:, :-1].values
         y = df.iloc[:, -1].values
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -203,7 +195,7 @@ elif activity == "Activity 3: Advanced Clinical Metrics":
         st.success("Full Evaluation Generated")
 
     if 'act3_results' in st.session_state:
-        threshold = st.slider("Classification Threshold", 0.1, 0.9, 0.5)
+        threshold = st.slider("Classification Threshold", 0.1, 0.9, 0.5, help="Adjusting this changes the definition of a positive prediction.")
         
         metrics = []
         for y_true, y_prob in st.session_state['act3_results']:
@@ -219,10 +211,10 @@ elif activity == "Activity 3: Advanced Clinical Metrics":
         
         avg_m = np.mean(metrics, axis=0)
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Avg Accuracy", f"{avg_m[0]:.3f}")
-        c2.metric("Avg Sensitivity", f"{avg_m[1]:.3f}")
-        c3.metric("Avg Specificity", f"{avg_m[2]:.3f}")
-        c4.metric("Avg Precision", f"{avg_m[3]:.3f}")
+        c1.metric("Avg Accuracy", f"{avg_m[0]:.3f}", help="Total Correct Predictions / Total Predictions")
+        c2.metric("Avg Sensitivity", f"{avg_m[1]:.3f}", help="True Positives / Actual Positives")
+        c3.metric("Avg Specificity", f"{avg_m[2]:.3f}", help="True Negatives / Actual Negatives")
+        c4.metric("Avg Precision", f"{avg_m[3]:.3f}", help="True Positives / Predicted Positives")
         
         st.info("Notebook Question: How is the performance now?")
 
@@ -240,16 +232,16 @@ elif activity == "Activity 4: Strategic Comparison":
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Decision Tree (MS1)**")
-        st.write("- Logic: Interpretable 'If-Then' branches.")
-        st.write("- Transparency: High (White Box).")
+        st.write("- **Logic:** Interpretable 'If-Then' branches.")
+        st.write("- **Transparency:** High (White Box).")
     with col2:
         st.markdown("**Deep Neural Network (DNN)**")
-        st.write("- Logic: Complex non-linear combinations across layers.")
-        st.write("- Transparency: Low (Black Box).")
+        st.write("- **Logic:** Complex non-linear combinations across layers.")
+        st.write("- **Transparency:** Low (Black Box).")
         
     st.markdown("---")
     
-    priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"])
+    priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"], help="Slide to reveal the recommended algorithm based on organizational goals.")
     
     if priority == "Interpretability":
         st.info("Strategy: Use the Decision Tree. Clinician trust relies on understanding the exact 'If-Then' logic.")
