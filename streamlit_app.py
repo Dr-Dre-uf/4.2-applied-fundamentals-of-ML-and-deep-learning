@@ -7,7 +7,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, Conv1D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Input, Dense, Dropout, Flatten
 from tensorflow.keras.optimizers import Adam
 
 # --- MONITORING UTILITY ---
@@ -20,15 +20,15 @@ def display_system_monitor():
     st.sidebar.markdown("---")
     st.sidebar.subheader("System Monitor")
     c1, c2 = st.sidebar.columns(2)
-    c1.metric("CPU Usage", f"{cpu_percent}%", help="Watch this spike during training; it represents the computational cost of the CNN filters.")
-    c2.metric("RAM Footprint", f"{mem_mb:.1f} MB", help="Total memory used by the dataset and the neural network model.")
+    c1.metric("CPU Usage", f"{cpu_percent}%", help="Spikes during DNN training.")
+    c2.metric("RAM Footprint", f"{mem_mb:.1f} MB", help="Total memory currently consumed.")
 
 st.set_page_config(page_title="Applied ML Demo", layout="wide")
 
 # --- TRACK SELECTION ---
 st.sidebar.header("Select Focus Area")
 track = st.sidebar.radio("Track", ["Clinical Science", "Foundational Science"], 
-                         help="Clinical focuses on patient care impact; Foundational focuses on algorithmic logic.")
+                         help="Toggle between patient-care outcomes and algorithmic-mechanism analysis.")
 st.sidebar.markdown("---")
 
 # --- NAVIGATION ---
@@ -37,13 +37,14 @@ activity = st.sidebar.radio("Navigation", [
     "Activity 2: Training and Base Metrics",
     "Activity 3: Evaluation Trade-offs",
     "Activity 4: Strategic Comparison"
-], help="Switch between the different phases of the machine learning pipeline.")
+], help="Navigate through the core components of the ML pipeline.")
 
 display_system_monitor()
 
 @st.cache_data
 def load_data():
     try:
+        # The notebook explicitly uses 'diabetes.csv'
         df = pd.read_csv("diabetes.csv")
     except:
         from sklearn.datasets import load_diabetes
@@ -52,11 +53,12 @@ def load_data():
         df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
         df.drop(columns='target', inplace=True)
     
-    # CLINICAL LABEL MAPPING for BMI, BP, and S1-S6
+    # Feature labels to match the diabetes dataset structure shown in the notebook
     mapping = {
-        'age': 'Age', 'sex': 'Sex', 'bmi': 'BMI', 'bp': 'Blood Pressure (MAP)',
-        's1': 'Total Cholesterol (s1)', 's2': 'LDL Cholesterol (s2)', 's3': 'HDL Cholesterol (s3)',
-        's4': 'Total/HDL Ratio (s4)', 's5': 'Serum Triglycerides (s5)', 's6': 'Blood Glucose (s6)'
+        'age': 'Age', 'bmi': 'BMI', 'bp': 'BloodPressure', 
+        'Pregnancies': 'Pregnancies', 'Glucose': 'Glucose', 
+        'SkinThickness': 'SkinThickness', 'Insulin': 'Insulin',
+        'DiabetesPedigreeFunction': 'DiabetesPedigreeFunction'
     }
     df.rename(columns=mapping, inplace=True)
     return df
@@ -72,19 +74,23 @@ if activity == "Activity 1: Objective and Data":
     with st.expander("Activity Guide: How to Use This Page", expanded=True):
         st.write("1. **Read the Scenario:** Understand the clinical problem we are trying to solve.")
         st.write("2. **Explore the Distribution:** Check the 'Outcome Distribution' chart to see the mortality rate baseline.")
-        st.write("3. **Compare Features:** Use the dropdown to see how specific lab results (BMI, BP, S1-S6) differ between survivors and non-survivors.")
+        st.write("3. **Compare Features:** Use the dropdown to see how specific features differ between outcomes.")
 
     st.header("Project Scenario")
     # Placeholder for image: 
+
+[Image of clinical decision support system architecture]
+
     if track == "Clinical Science":
         st.write("""
-        You are a data scientist in an ICU. Your objective is to build a 1D CNN that identifies patients at high risk of 
-        mortality using vital signs and lab results.
+        You are part of a hospital’s clinical analytics team using a **DNN model** to predict in-hospital mortality 
+        using data from the eICU Collaborative Research Database. The dataset includes patient demographics and 
+        selected lab results such as glucose, creatinine, and potassium.
         """)
     else:
         st.write("""
-        This task demonstrates 1D CNN architecture. The goal is to evaluate the model's ability to learn 
-        from sequential or tabular clinical arrays without manual feature engineering.
+        This task focuses on using a Deep Neural Network (DNN) for binary classification. The primary advantage of a DNN 
+        is its ability to learn complex, non-linear relationships through multiple hidden layers and Dropout regularization.
         """)
 
     st.markdown("### Interactive Data Exploration")
@@ -94,7 +100,7 @@ if activity == "Activity 1: Objective and Data":
     col1, col2 = st.columns([1, 1.5])
     with col1:
         st.markdown("**Outcome Distribution**")
-        class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival', 1: 'Death'})
+        class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(class_counts, color="#FF4B4B")
         st.caption("Class imbalance: Most records represent patient survival.")
     with col2:
@@ -110,34 +116,50 @@ elif activity == "Activity 2: Training and Base Metrics":
     
     with st.expander("Activity Guide: How to Train the Model", expanded=True):
         st.write("1. **Set Parameters:** Use the sidebar sliders to set Epochs and Batch Size.")
-        st.write("2. **Train:** Click 'Execute Training' to start the neural network's optimization process.")
-        st.write("3. **Observe:** Watch the performance chart live. Does accuracy keep improving or does it plateau?")
+        st.write("2. **Train:** Click 'Execute Training' to start the DNN optimization.")
+        st.write("3. **Observe:** Does total accuracy reflect true performance in this scenario?")
 
     st.sidebar.subheader("Training Parameters")
-    epochs = st.sidebar.slider("Epochs", 5, 50, 20, help="More epochs allow the model to learn longer but increase CPU time.")
+    epochs = st.sidebar.slider("Epochs", 5, 50, 50, help="More epochs allow the model to learn longer.")
     batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Smaller batches make training more granular.")
 
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
-        st.subheader("1D CNN Configuration")
+        st.subheader("DNN Configuration")
         # Placeholder for image: 
-        if st.button("Execute Training", help="Starts the automated learning process."):
+        st.code("""
+        model = Sequential([
+            Input(shape=(X.shape[1],)),
+            Dense(128, activation='relu'),
+            Dropout(0.3),
+            Dense(64, activation='relu'),
+            Dropout(0.2),
+            Dense(32, activation='relu'),
+            Dense(1, activation='sigmoid')
+        ])
+        """, language='python')
+        
+        if st.button("Execute Training"):
             X = df.iloc[:, :-1].values
             y = df.iloc[:, -1].values
             scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X).reshape(len(X), X.shape[1], 1)
+            X_scaled = scaler.fit_transform(X)
             
+            # Architecture exactly matching the notebook
             model = Sequential([
-                Input(shape=(X.shape[1], 1)),
-                Conv1D(16, 2, activation='relu'),
-                Flatten(),
+                Input(shape=(X_scaled.shape[1],)),
+                Dense(128, activation='relu'),
+                Dropout(0.3),
+                Dense(64, activation='relu'),
+                Dropout(0.2),
+                Dense(32, activation='relu'),
                 Dense(1, activation='sigmoid')
             ])
             model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
             
-            with st.spinner("Training model... Observe the System Monitor in the sidebar!"):
-                history = model.fit(X_scaled, y, epochs=epochs, validation_split=0.2, verbose=0)
+            with st.spinner("Training model..."):
+                history = model.fit(X_scaled, y, epochs=epochs, batch_size=batch_size, validation_split=0.2, verbose=0)
             
             st.session_state['act2_history'] = history.history
             st.success("Training Complete")
@@ -146,9 +168,9 @@ elif activity == "Activity 2: Training and Base Metrics":
         if 'act2_history' in st.session_state:
             st.subheader("Model Learning Curve")
             st.line_chart(pd.DataFrame(st.session_state['act2_history'])['accuracy'])
-            st.metric("Final Total Accuracy", f"{st.session_state['act2_history']['accuracy'][-1]:.2%}", 
-                      help="The percentage of correct predictions (Survivals + Deaths).")
-            st.warning("Note: In imbalanced mortality data, high accuracy can be misleading.")
+            st.metric("Final Total Accuracy", f"{st.session_state['act2_history']['accuracy'][-1]:.2%}")
+            
+            st.warning("Notebook Question: Is total accuracy a good evaluation metric for this case?")
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -157,12 +179,11 @@ elif activity == "Activity 3: Evaluation Trade-offs":
     st.title("Activity 3: Advanced Clinical Metrics")
     
     with st.expander("Activity Guide: How to Evaluate the Model", expanded=True):
-        st.write("1. **Generate Predictions:** Click 'Run 5-Fold Evaluation' to get cross-validated results.")
-        st.write("2. **Adjust Threshold:** Move the slider. Notice how catching more deaths (Sensitivity) often creates more false alarms.")
-        st.write("3. **Analyze:** Look for the 'Sweet Spot' between sensitivity and specificity.")
+        st.write("1. **Generate Predictions:** Click 'Run 5-Fold Evaluation'.")
+        st.write("2. **Adjust Threshold:** Move the slider to shift the balance between Sensitivity and Specificity.")
 
     # Placeholder for image: 
-    if st.button("Run 5-Fold Evaluation", help="Runs the model 5 separate times on different data slices for rigor."):
+    if st.button("Run 5-Fold Evaluation"):
         X = df.iloc[:, :-1].values
         y = df.iloc[:, -1].values
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -170,34 +191,51 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         results = []
         for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
             scaler = StandardScaler()
-            X_train = scaler.fit_transform(X[train_idx]).reshape(len(train_idx), X.shape[1], 1)
-            X_val = scaler.transform(X[val_idx]).reshape(len(val_idx), X.shape[1], 1)
+            X_train = scaler.fit_transform(X[train_idx])
+            X_val = scaler.transform(X[val_idx])
+            y_train, y_val = y[train_idx], y[val_idx]
             
-            model = Sequential([Input(shape=(X.shape[1], 1)), Conv1D(16, 2, activation='relu'), Flatten(), Dense(1, activation='sigmoid')])
-            model.compile(optimizer='adam', loss='binary_crossentropy')
-            model.fit(X_train, y[train_idx], epochs=10, verbose=0)
+            model = Sequential([
+                Input(shape=(X_train.shape[1],)),
+                Dense(128, activation='relu'),
+                Dropout(0.3),
+                Dense(64, activation='relu'),
+                Dropout(0.2),
+                Dense(32, activation='relu'),
+                Dense(1, activation='sigmoid')
+            ])
+            model.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
+            model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=0)
             
             y_prob = model.predict(X_val, verbose=0)
-            results.append((y[val_idx], y_prob))
+            results.append((y_val, y_prob))
         
         st.session_state['act3_results'] = results
         st.success("Full Evaluation Generated")
 
     if 'act3_results' in st.session_state:
-        threshold = st.slider("Classification Sensitivity Threshold", 0.1, 0.9, 0.5, 
-                              help="Lowering this makes the model 'cautious' (picks up more deaths); Raising it makes it 'strict'.")
+        threshold = st.slider("Classification Threshold", 0.1, 0.9, 0.5)
         
         metrics = []
         for y_true, y_prob in st.session_state['act3_results']:
-            y_pred = (y_prob > threshold).astype(int)
+            y_pred = (y_prob > threshold).astype(int).flatten()
             tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
-            metrics.append([tp/(tp+fn), tn/(tn+fp), tp/(tp+fp)])
+            
+            acc = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+            sens = tp / (tp + fn) if (tp + fn) > 0 else 0
+            spec = tn / (tn + fp) if (tn + fp) > 0 else 0
+            prec = tp / (tp + fp) if (tp + fp) > 0 else 0
+            
+            metrics.append([acc, sens, spec, prec])
         
         avg_m = np.mean(metrics, axis=0)
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Sensitivity (Recall)", f"{avg_m[0]:.3f}", help="What % of all deaths did we successfully flag?")
-        c2.metric("Specificity", f"{avg_m[1]:.3f}", help="What % of all survivors did we successfully identify?")
-        c3.metric("Precision", f"{avg_m[2]:.3f}", help="When we flag a death, how often are we actually correct?")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Avg Accuracy", f"{avg_m[0]:.3f}")
+        c2.metric("Avg Sensitivity", f"{avg_m[1]:.3f}")
+        c3.metric("Avg Specificity", f"{avg_m[2]:.3f}")
+        c4.metric("Avg Precision", f"{avg_m[3]:.3f}")
+        
+        st.info("Notebook Question: How is the performance now?")
 
 # ==========================================
 # ACTIVITY 4: STRATEGIC COMPARISON
@@ -206,25 +244,28 @@ elif activity == "Activity 4: Strategic Comparison":
     st.title("Activity 4: Model Strategy")
     
     with st.expander("Activity Guide: Final Assessment", expanded=True):
-        st.write("1. **Compare Models:** Review the visual differences between Trees and CNNs.")
-        st.write("2. **Select Priority:** Move the slider to reflect your specific deployment goals.")
-        st.write("3. **Final Decision:** Compare Interpretability vs Performance.")
+        st.write("Compare the DNN to the Decision Tree and determine which to deploy based on your priorities.")
 
-    # Placeholder for image: [Image comparing decision tree architecture to neural network architecture]
+    # Placeholder for image: [Image comparing decision tree logic vs Deep Neural Network layers]
     st.subheader("Decision Matrix")
     
-    priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"], 
-                                help="Interpretability favors Trees; Performance favors CNNs.")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Decision Tree (MS1)**")
+        st.write("- Logic: Interpretable 'If-Then' branches.")
+        st.write("- Transparency: High (White Box).")
+    with col2:
+        st.markdown("**Deep Neural Network (DNN)**")
+        st.write("- Logic: Complex non-linear combinations across layers.")
+        st.write("- Transparency: Low (Black Box).")
+        
+    st.markdown("---")
+    
+    priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"])
     
     if priority == "Interpretability":
         st.info("Strategy: Use the Decision Tree. Clinician trust relies on understanding the exact 'If-Then' logic.")
     elif priority == "Performance":
-        st.success("Strategy: Use the 1D CNN. Raw detection power is the highest priority for patient safety.")
+        st.success("Strategy: Use the DNN. Raw detection power is the highest priority for patient safety.")
     else:
         st.warning("Strategy: Hybrid approach required.")
-        
-    st.bar_chart(pd.DataFrame({
-        'Metric': ['Interpretability', 'Raw Performance', 'Automation'],
-        'Decision Tree': [9, 5, 2],
-        '1D CNN': [2, 9, 8]
-    }).set_index('Metric'))
