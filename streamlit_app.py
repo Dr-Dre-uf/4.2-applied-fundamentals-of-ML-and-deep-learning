@@ -174,7 +174,12 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
         
         results = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
         for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+            status_text.text(f"Training Fold {fold + 1} of 5...")
+            
             scaler = StandardScaler()
             X_train = scaler.fit_transform(X[train_idx])
             X_val = scaler.transform(X[val_idx])
@@ -190,11 +195,16 @@ elif activity == "Activity 3: Evaluation Trade-offs":
                 Dense(1, activation='sigmoid')
             ])
             model.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
-            model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=0)
+            
+            # Optimized for speed during demo (15 epochs, larger batch)
+            model.fit(X_train, y_train, epochs=15, batch_size=32, verbose=0)
             
             y_prob = model.predict(X_val, verbose=0)
             results.append((y_val, y_prob))
+            
+            progress_bar.progress((fold + 1) / 5)
         
+        status_text.text("Cross-validation complete!")
         st.session_state['act3_results'] = results
         st.success("Full Evaluation Generated")
 
