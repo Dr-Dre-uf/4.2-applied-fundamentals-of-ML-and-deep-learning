@@ -7,12 +7,11 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, Dense, Dropout, Flatten
+from tensorflow.keras.layers import Input, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 
 # --- MONITORING UTILITY ---
 def display_system_monitor():
-    """Tracks CPU and RAM usage to show the cost of Deep Learning training."""
     process = psutil.Process(os.getpid())
     mem_mb = process.memory_info().rss / (1024 * 1024)
     cpu_percent = process.cpu_percent(interval=0.1)
@@ -44,7 +43,6 @@ display_system_monitor()
 @st.cache_data
 def load_data():
     try:
-        # The notebook explicitly uses 'diabetes.csv'
         df = pd.read_csv("diabetes.csv")
     except:
         from sklearn.datasets import load_diabetes
@@ -53,7 +51,6 @@ def load_data():
         df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
         df.drop(columns='target', inplace=True)
     
-    # Feature labels to match the diabetes dataset structure shown in the notebook
     mapping = {
         'age': 'Age', 'bmi': 'BMI', 'bp': 'BloodPressure', 
         'Pregnancies': 'Pregnancies', 'Glucose': 'Glucose', 
@@ -77,10 +74,6 @@ if activity == "Activity 1: Objective and Data":
         st.write("3. **Compare Features:** Use the dropdown to see how specific features differ between outcomes.")
 
     st.header("Project Scenario")
-    # Placeholder for image: 
-
-[Image of clinical decision support system architecture]
-
     if track == "Clinical Science":
         st.write("""
         You are part of a hospital’s clinical analytics team using a **DNN model** to predict in-hospital mortality 
@@ -127,7 +120,6 @@ elif activity == "Activity 2: Training and Base Metrics":
     
     with col1:
         st.subheader("DNN Configuration")
-        # Placeholder for image: 
         st.code("""
         model = Sequential([
             Input(shape=(X.shape[1],)),
@@ -146,7 +138,6 @@ elif activity == "Activity 2: Training and Base Metrics":
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(X)
             
-            # Architecture exactly matching the notebook
             model = Sequential([
                 Input(shape=(X_scaled.shape[1],)),
                 Dense(128, activation='relu'),
@@ -169,20 +160,18 @@ elif activity == "Activity 2: Training and Base Metrics":
             st.subheader("Model Learning Curve")
             st.line_chart(pd.DataFrame(st.session_state['act2_history'])['accuracy'])
             st.metric("Final Total Accuracy", f"{st.session_state['act2_history']['accuracy'][-1]:.2%}")
-            
             st.warning("Notebook Question: Is total accuracy a good evaluation metric for this case?")
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
 # ==========================================
-elif activity == "Activity 3: Evaluation Trade-offs":
+elif activity == "Activity 3: Advanced Clinical Metrics":
     st.title("Activity 3: Advanced Clinical Metrics")
     
     with st.expander("Activity Guide: How to Evaluate the Model", expanded=True):
         st.write("1. **Generate Predictions:** Click 'Run 5-Fold Evaluation'.")
         st.write("2. **Adjust Threshold:** Move the slider to shift the balance between Sensitivity and Specificity.")
 
-    # Placeholder for image: 
     if st.button("Run 5-Fold Evaluation"):
         X = df.iloc[:, :-1].values
         y = df.iloc[:, -1].values
@@ -246,7 +235,6 @@ elif activity == "Activity 4: Strategic Comparison":
     with st.expander("Activity Guide: Final Assessment", expanded=True):
         st.write("Compare the DNN to the Decision Tree and determine which to deploy based on your priorities.")
 
-    # Placeholder for image: [Image comparing decision tree logic vs Deep Neural Network layers]
     st.subheader("Decision Matrix")
     
     col1, col2 = st.columns(2)
