@@ -81,14 +81,14 @@ if activity == "Activity 1: Objective and Data":
         st.markdown("**Outcome Distribution**")
         class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(class_counts, color="#FF4B4B")
-        # ADA Compliance: Screen reader accessible text summary of the chart
+        # ADA Compliance: Textual summary of the chart
         st.write(f"**Data Summary:** There are {class_counts.iloc[0]} Survival records and {class_counts.iloc[1]} Death records. This represents a significant class imbalance.")
         
     with col2:
         st.markdown(f"**Mean {feature_to_view} by Outcome**")
         feature_means = df.groupby('Outcome')[feature_to_view].mean()
         st.bar_chart(feature_means)
-        # ADA Compliance: Screen reader accessible text summary of the chart
+        # ADA Compliance: Textual summary of the chart
         st.write(f"**Data Summary:** The average {feature_to_view} for Survivors is {feature_means.iloc[0]:.2f}, while the average for Deaths is {feature_means.iloc[1]:.2f}.")
 
 # ==========================================
@@ -110,14 +110,19 @@ elif activity == "Activity 2: Training and Base Metrics":
     
     with col1:
         st.subheader("DNN Configuration")
-        st.markdown("""
-        **Network Architecture:**
-        * **Input Layer:** Receives the scaled clinical features.
-        * **Hidden Layer 1:** 128 nodes (ReLU activation) with 30% Dropout to prevent overfitting.
-        * **Hidden Layer 2:** 64 nodes (ReLU activation) with 20% Dropout.
-        * **Hidden Layer 3:** 32 nodes (ReLU activation) to refine the learned representations.
-        * **Output Layer:** 1 node (Sigmoid activation) to output a binary classification probability.
-        """)
+        
+        # Displaying the Python syntax for the students
+        st.code("""
+model = Sequential([
+    Input(shape=(X_scaled.shape[1],)),
+    Dense(128, activation='relu'),
+    Dropout(0.3),
+    Dense(64, activation='relu'),
+    Dropout(0.2),
+    Dense(32, activation='relu'),
+    Dense(1, activation='sigmoid')
+])
+        """, language='python')
         
         if st.button("Execute Training", help="Click to train the Deep Neural Network."):
             X = df.iloc[:, :-1].values
@@ -152,7 +157,6 @@ elif activity == "Activity 2: Training and Base Metrics":
             
             # ADA Compliance Summary
             st.write(f"**Data Summary:** The model achieved a final global training accuracy of {final_acc:.2%}.")
-            st.warning("Notebook Question: Is total accuracy a good evaluation metric for this case?")
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -215,8 +219,6 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         c2.metric("Avg Sensitivity", f"{avg_m[1]:.3f}", help="True Positives / Actual Positives")
         c3.metric("Avg Specificity", f"{avg_m[2]:.3f}", help="True Negatives / Actual Negatives")
         c4.metric("Avg Precision", f"{avg_m[3]:.3f}", help="True Positives / Predicted Positives")
-        
-        st.info("Notebook Question: How is the performance now?")
 
 # ==========================================
 # ACTIVITY 4: STRATEGIC COMPARISON
