@@ -89,12 +89,19 @@ if activity == "Activity 1: Objective and Data":
         st.bar_chart(feature_means)
         st.write(f"**Data Summary:** The average {feature_to_view} for Survivors is {feature_means.iloc[0]:.2f}, while the average for Deaths is {feature_means.iloc[1]:.2f}.")
 
-    with st.expander("Reveal: Why are the numbers on the Y-Axis so small?"):
-        st.info("""
-        **Standardized Data:** If you see numbers ranging from -0.05 to 0.05 for factors like Age or BMI, it means the data has been scaled. 
-        In Machine Learning, if we don't scale the data, large numbers (like Glucose = 150) will overpower smaller numbers (like BMI = 25). 
-        The data is transformed so the average is 0, allowing the neural network to treat all features equally.
-        """)
+    with st.expander("Reveal: Activity 1 Application"):
+        if track == "Clinical Science":
+            st.info("""
+            **What is the job task?** The job task is to predict in-hospital mortality using demographic and lab data to support ICU triage.
+            
+            **What is the advantage of using a DNN?** A Deep Neural Network considers not only the individual clinical features but also the complex, non-linear relationships among them (e.g., how low blood pressure interacts specifically with a high BMI and high Glucose).
+            """)
+        else:
+            st.info("""
+            **What is the job task?** The task is binary classification: mapping continuous input arrays to a 0 or 1 target variable on a highly imbalanced dataset.
+            
+            **What is the advantage of using a DNN?** The DNN provides automated, non-linear feature extraction across multiple hidden layers, eliminating the need for manual feature engineering required by traditional baseline models.
+            """)
 
 # ==========================================
 # ACTIVITY 2: TRAINING AND BASE METRICS
@@ -161,12 +168,19 @@ model = Sequential([
             
             st.write(f"**Data Summary:** The model achieved a final global training accuracy of {final_acc:.2%}.")
             
-            with st.expander("Reveal: Is Total Accuracy a good metric here?"):
-                st.warning("""
-                **No, it is highly misleading.** Because the dataset is imbalanced (the vast majority of patients survive), 
-                a model could simply guess "Survival" for every single patient and still achieve high total accuracy. 
-                In clinical settings, we must look at the F1 Score, Sensitivity, and Specificity instead.
-                """)
+            with st.expander("Reveal: Activity 2 Application"):
+                if track == "Clinical Science":
+                    st.warning("""
+                    **Is it better than the MS1 Decision Tree?** While the DNN may reach a higher raw accuracy score due to its ability to find hidden patterns, accuracy is highly deceptive here. 
+                    
+                    **Is total accuracy a good metric?** No. Because most patients survive (class imbalance), a model could guess "Survival" for everyone and still appear highly accurate while failing to detect a single mortality risk.
+                    """)
+                else:
+                    st.warning("""
+                    **Is it better than the MS1 Decision Tree?** The DNN has higher capacity, but we must evaluate if it is actually learning the minority class or just defaulting to the majority.
+                    
+                    **Is total accuracy a good metric?** No. In imbalanced datasets, the binary cross-entropy loss function is dominated by the majority class, masking the model's true predictive capability on the minority class.
+                    """)
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -239,12 +253,15 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         c3.metric("Avg Specificity", f"{avg_m[2]:.3f}", help="True Negatives / Actual Negatives")
         c4.metric("Avg Precision", f"{avg_m[3]:.3f}", help="True Positives / Predicted Positives")
         
-        with st.expander("Reveal: Understanding the Trade-Off"):
-            st.info("""
-            **The ROC Curve Connection:** Moving the slider above is essentially manually traveling along an ROC (Receiver Operating Characteristic) curve. 
-            If you lower the threshold to catch every single potential mortality case (High Sensitivity), you will inherently increase 
-            the number of false alarms (Lower Specificity). Hospitals must decide where their 'sweet spot' is on this curve.
-            """)
+        with st.expander("Reveal: Activity 3 Application"):
+            if track == "Clinical Science":
+                st.info("""
+                **How is the performance now?** Adjusting the threshold reveals the clinical trade-off. Lowering the threshold increases Sensitivity (catching more potential deaths) but decreases Specificity (creating more false alarms). Evaluating these metrics provides a much more honest view of the model's bedside utility than Total Accuracy.
+                """)
+            else:
+                st.info("""
+                **How is the performance now?** Shifting the decision boundary illustrates the model's behavior in the Precision-Recall space. We can now clearly see how effectively the network minimizes False Negatives versus False Positives, offering a truer picture of minority class optimization.
+                """)
 
 # ==========================================
 # ACTIVITY 4: STRATEGIC COMPARISON
@@ -278,10 +295,12 @@ elif activity == "Activity 4: Strategic Comparison":
     else:
         st.warning("Strategy: Hybrid approach required.")
 
-    with st.expander("Reveal: Why does the DNN perform better?"):
-        st.success("""
-        **The Power of Hidden Layers:** A Decision Tree makes rigid, rectangular cuts in the data (e.g., "If Age > 60 and BP < 90"). 
-        A Deep Neural Network evaluates the non-linear relationship *between* the variables. It can understand that a slightly low blood 
-        pressure might be perfectly fine for an average patient, but extremely dangerous if combined with a specific BMI and Glucose level. 
-        It trades human readability (the "Black Box") for immense mathematical predictive power.
-        """)
+    with st.expander("Reveal: Activity 4 Application"):
+        if track == "Clinical Science":
+            st.success("""
+            **Decision Tree or DNN?** You would likely deploy the DNN to maximize the detection of at-risk patients and save lives. However, if hospital administrators or doctors refuse to use a "Black Box" system because they cannot interpret the reasoning behind a prediction, the Decision Tree must be used.
+            """)
+        else:
+            st.success("""
+            **Decision Tree or DNN?** The DNN provides superior capacity for non-linear feature extraction compared to the orthogonal decision boundaries of the Decision Tree. You would choose the DNN for complex mapping, but default to the Decision Tree if structural transparency and model explainability are absolute requirements.
+            """)
