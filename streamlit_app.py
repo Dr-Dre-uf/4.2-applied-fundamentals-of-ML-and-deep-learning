@@ -81,15 +81,20 @@ if activity == "Activity 1: Objective and Data":
         st.markdown("**Outcome Distribution**")
         class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(class_counts, color="#FF4B4B")
-        # ADA Compliance: Textual summary of the chart
         st.write(f"**Data Summary:** There are {class_counts.iloc[0]} Survival records and {class_counts.iloc[1]} Death records. This represents a significant class imbalance.")
         
     with col2:
         st.markdown(f"**Mean {feature_to_view} by Outcome**")
         feature_means = df.groupby('Outcome')[feature_to_view].mean()
         st.bar_chart(feature_means)
-        # ADA Compliance: Textual summary of the chart
         st.write(f"**Data Summary:** The average {feature_to_view} for Survivors is {feature_means.iloc[0]:.2f}, while the average for Deaths is {feature_means.iloc[1]:.2f}.")
+
+    with st.expander("Reveal: Why are the numbers on the Y-Axis so small?"):
+        st.info("""
+        **Standardized Data:** If you see numbers ranging from -0.05 to 0.05 for factors like Age or BMI, it means the data has been scaled. 
+        In Machine Learning, if we don't scale the data, large numbers (like Glucose = 150) will overpower smaller numbers (like BMI = 25). 
+        The data is transformed so the average is 0, allowing the neural network to treat all features equally.
+        """)
 
 # ==========================================
 # ACTIVITY 2: TRAINING AND BASE METRICS
@@ -111,7 +116,6 @@ elif activity == "Activity 2: Training and Base Metrics":
     with col1:
         st.subheader("DNN Configuration")
         
-        # Displaying the Python syntax for the students
         st.code("""
 model = Sequential([
     Input(shape=(X_scaled.shape[1],)),
@@ -155,8 +159,14 @@ model = Sequential([
             final_acc = st.session_state['act2_history']['accuracy'][-1]
             st.metric("Final Total Accuracy", f"{final_acc:.2%}", help="The overall percentage of correct predictions.")
             
-            # ADA Compliance Summary
             st.write(f"**Data Summary:** The model achieved a final global training accuracy of {final_acc:.2%}.")
+            
+            with st.expander("Reveal: Is Total Accuracy a good metric here?"):
+                st.warning("""
+                **No, it is highly misleading.** Because the dataset is imbalanced (the vast majority of patients survive), 
+                a model could simply guess "Survival" for every single patient and still achieve high total accuracy. 
+                In clinical settings, we must look at the F1 Score, Sensitivity, and Specificity instead.
+                """)
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -196,7 +206,6 @@ elif activity == "Activity 3: Evaluation Trade-offs":
             ])
             model.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
             
-            # Optimized for speed during demo (15 epochs, larger batch)
             model.fit(X_train, y_train, epochs=15, batch_size=32, verbose=0)
             
             y_prob = model.predict(X_val, verbose=0)
@@ -225,10 +234,17 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         
         avg_m = np.mean(metrics, axis=0)
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Avg Accuracy", f"{avg_m[0]:.3f}", help="Total Correct Predictions / Total Predictions")
+        c1.metric("Avg Accuracy", f"{avg_m[0]:.3f}", help="Total Correct / Total Predictions")
         c2.metric("Avg Sensitivity", f"{avg_m[1]:.3f}", help="True Positives / Actual Positives")
         c3.metric("Avg Specificity", f"{avg_m[2]:.3f}", help="True Negatives / Actual Negatives")
         c4.metric("Avg Precision", f"{avg_m[3]:.3f}", help="True Positives / Predicted Positives")
+        
+        with st.expander("Reveal: Understanding the Trade-Off"):
+            st.info("""
+            **The ROC Curve Connection:** Moving the slider above is essentially manually traveling along an ROC (Receiver Operating Characteristic) curve. 
+            If you lower the threshold to catch every single potential mortality case (High Sensitivity), you will inherently increase 
+            the number of false alarms (Lower Specificity). Hospitals must decide where their 'sweet spot' is on this curve.
+            """)
 
 # ==========================================
 # ACTIVITY 4: STRATEGIC COMPARISON
@@ -261,3 +277,11 @@ elif activity == "Activity 4: Strategic Comparison":
         st.success("Strategy: Use the DNN. Raw detection power is the highest priority for patient safety.")
     else:
         st.warning("Strategy: Hybrid approach required.")
+
+    with st.expander("Reveal: Why does the DNN perform better?"):
+        st.success("""
+        **The Power of Hidden Layers:** A Decision Tree makes rigid, rectangular cuts in the data (e.g., "If Age > 60 and BP < 90"). 
+        A Deep Neural Network evaluates the non-linear relationship *between* the variables. It can understand that a slightly low blood 
+        pressure might be perfectly fine for an average patient, but extremely dangerous if combined with a specific BMI and Glucose level. 
+        It trades human readability (the "Black Box") for immense mathematical predictive power.
+        """)
