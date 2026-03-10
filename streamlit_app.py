@@ -72,7 +72,6 @@ def load_data():
         try:
             df = pd.read_csv("diabetes.csv")
         except FileNotFoundError:
-            # Fallback dataset generation if file is missing
             from sklearn.datasets import load_diabetes
             data = load_diabetes(as_frame=True)
             df = data.frame.copy()
@@ -104,12 +103,12 @@ if activity == "Activity 1 - Data Exploration":
     n_rows = st.slider(
         "Number of records to display", 
         min_value=1, max_value=20, value=5,
-        help="Drag the slider to increase or decrease the number of rows visible in the table below."
+        help="Adjust the number of rows visible in the dataset table."
     )
     st.dataframe(df.head(n_rows), use_container_width=True)
     
     with st.expander("View Data Types (.dtypes)"):
-        st.write("These are the variable types the computer recognizes for each column:")
+        st.write("Variable types recognized for each column:")
         st.write(df.dtypes)
     
     st.subheader("Feature Distributions")
@@ -117,7 +116,7 @@ if activity == "Activity 1 - Data Exploration":
     feature_to_plot = st.selectbox(
         "Select a feature to visualize:", 
         feature_cols,
-        help="Choose a specific metric to see a chart of its distribution."
+        help="Choose a specific metric to observe its distribution across outcomes."
     )
     
     col1, col2 = st.columns([1, 1.5])
@@ -125,27 +124,27 @@ if activity == "Activity 1 - Data Exploration":
         st.markdown("**Outcome Distribution**")
         class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(class_counts, color="#1f77b4")
-        st.write(f"**Data Summary:** There are {class_counts.iloc[0]} Survival records and {class_counts.iloc[1]} Death records.")
+        st.write(f"**Data Summary:** There are {class_counts.iloc[0]} Survival records and {class_counts.iloc[1]} Death records. This confirms a significant class imbalance.")
         
     with col2:
         st.markdown(f"**Mean {feature_to_plot} by Outcome**")
-        feature_means = df.groupby('Outcome')[feature_to_view if 'feature_to_view' in locals() else feature_to_plot].mean()
+        feature_means = df.groupby('Outcome')[feature_to_plot].mean()
         st.bar_chart(feature_means, color="#ff7f0e")
-        st.write(f"**Data Summary:** The mean {feature_to_plot} for Survivors is {feature_means.iloc[0]:.2f}, while for Deaths it is {feature_means.iloc[1]:.2f}.")
+        st.write(f"**Data Summary:** The average {feature_to_plot} for Survivors is {feature_means.iloc[0]:.2f}, while the average for Deaths is {feature_means.iloc[1]:.2f}.")
 
     st.markdown("---")
-    with st.expander("Reveal Expected Insights for Data Exploration"):
+    with st.expander("Reveal: Conceptual Insights for Activity 1"):
         if perspective == "Clinical Science":
             st.info("""
             **The Job Task:** The objective is to predict in-hospital mortality using demographic and lab data to support ICU triage.
-            **The Algorithmic Advantage:** A Deep Neural Network considers not only the individual clinical features but also the complex, non-linear relationships among them.
-            **Understanding the Data Format:** Prior to ingestion, features are standardized (scaled) so that features with large numerical values do not mathematically overpower those with small values.
+            **The Algorithmic Advantage:** A Deep Neural Network evaluates the non-linear interactions between variables. A specific blood pressure value may be safe for one patient but critical for another when combined with specific BMI and Glucose levels.
+            **Understanding the Data Format:** Features are standardized so that large numerical values do not dominate the model's weight updates, ensuring all clinical metrics are treated proportionally.
             """)
         else:
             st.info("""
-            **The Job Task:** The task is binary classification, mapping continuous input arrays to a 0 or 1 target variable on a highly imbalanced dataset.
-            **The Algorithmic Advantage:** The Deep Neural Network provides automated, non-linear feature extraction across multiple dense layers, eliminating manual feature engineering.
-            **Understanding the Data Format:** Features are standardized to a mean of 0 and a variance of 1 to ensure stable gradient updates during backpropagation.
+            **The Job Task:** The task is binary classification, mapping continuous input arrays to a discrete target on an imbalanced dataset.
+            **The Algorithmic Advantage:** The DNN uses multiple hidden layers for automated feature extraction, capturing abstract patterns without manual feature engineering.
+            **Understanding the Data Format:** Standardizing data to a mean of 0 and variance of 1 ensures stable gradient updates during the backpropagation process.
             """)
 
 # --------------------
@@ -158,8 +157,8 @@ elif activity == "Activity 2 - Model Optimization":
     st.write("Configure the optimization parameters to dictate how the network updates its internal weights. Execute the training pipeline and evaluate the resulting learning curve.")
     
     st.sidebar.subheader("Training Parameters")
-    epochs = st.sidebar.slider("Epochs", 5, 50, 50, help="Number of complete passes through the training dataset.")
-    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Samples processed before the model updates its weights.")
+    epochs = st.sidebar.slider("Epochs", 5, 50, 50, help="Total passes through the training data.")
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Samples processed before weights are updated.")
 
     col1, col2 = st.columns([1, 1.5])
     
@@ -206,19 +205,19 @@ model = Sequential([
             st.line_chart(pd.DataFrame(st.session_state['act2_history'])['accuracy'])
             final_acc = st.session_state['act2_history']['accuracy'][-1]
             st.metric("Final Global Accuracy", f"{final_acc:.4f}")
-            st.write(f"**Data Summary:** The model converged with a final global training accuracy of {final_acc:.2%}.")
+            st.write(f"**Data Summary:** The model achieved a final global training accuracy of {final_acc:.2%}.")
 
     st.markdown("---")
-    with st.expander("Reveal Expected Insights for Model Optimization"):
+    with st.expander("Reveal: Conceptual Insights for Activity 2"):
         if perspective == "Clinical Science":
             st.warning("""
-            **Comparison to MS1:** While the DNN may reach higher accuracy than the Decision Tree, global accuracy is deceptive here.
-            **Metric Suitability:** Total accuracy is not a valid evaluation metric for this specific case because the vast majority of patients survive.
+            **Comparison to MS1:** The DNN can reach higher accuracy than the Decision Tree by finding hidden layers of risk, but global accuracy alone is deceptive.
+            **Metric Suitability:** In mortality prediction, accuracy is an insufficient metric. Because most patients survive, the model could guess 'Survival' for everyone and still appear accurate while failing to detect at-risk patients.
             """)
         else:
             st.warning("""
-            **Comparison to MS1:** The DNN has higher capacity, but we must evaluate if it is optimizing for the minority class or defaulting to the majority.
-            **Metric Suitability:** In imbalanced datasets, total accuracy is insufficient as the loss function is dominated by the majority class.
+            **Comparison to MS1:** The DNN has higher capacity, but researchers must check if the model is genuinely learning the minority class or simply defaulting to the majority class distribution.
+            **Metric Suitability:** Total accuracy is skewed in imbalanced datasets because the loss function is dominated by the majority class samples.
             """)
 
 # --------------------
@@ -283,9 +282,9 @@ elif activity == "Activity 3 - Cross-Validation Analysis":
         c4.metric("Avg Precision", f"{avg_m[3]:.3f}")
 
     st.markdown("---")
-    with st.expander("Reveal Expected Insights for Cross-Validation Analysis"):
+    with st.expander("Reveal: Conceptual Insights for Activity 3"):
         st.info("""
-        **Performance Evaluation:** Lowering the threshold increases Sensitivity (catching more mortality cases) but decreases Specificity (generating more false alarms). This effectively simulates traversing an ROC curve.
+        **Performance Evaluation:** Lowering the threshold improves Sensitivity (catching more deaths) but reduces Specificity (more false alarms). This adjustment is the interactive equivalent of moving along an ROC curve to find the optimal clinical balance.
         """)
 
 # --------------------
@@ -305,21 +304,21 @@ elif activity == "Activity 4 - Strategic Evaluation":
         st.write("- Transparency: High (White Box).")
     with col2:
         st.markdown("**Deep Neural Network (Current)**")
-        st.write("- Logic: Complex non-linear combinations.")
+        st.write("- Logic: Complex non-linear combinations across hidden layers.")
         st.write("- Transparency: Low (Black Box).")
         
     st.markdown("---")
-    priority = st.select_slider("Select Requirement:", options=["Interpretability", "Balanced", "Performance"])
+    priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"])
     
     if priority == "Interpretability":
-        st.info("Strategy: Utilize the Decision Tree for human-readable logic.")
+        st.info("Strategy: Use the Decision Tree. Clinician trust often relies on being able to follow the model's logic step-by-step.")
     elif priority == "Performance":
-        st.success("Strategy: Utilize the DNN for maximum predictive power.")
+        st.success("Strategy: Use the DNN. Raw predictive power is prioritized to maximize patient safety and triage accuracy.")
     else:
-        st.warning("Strategy: Hybrid or post-hoc explainability required.")
+        st.warning("Strategy: A balanced approach may require hybrid models or post-hoc explainability tools.")
 
     st.markdown("---")
-    with st.expander("Reveal Expected Insights for Strategic Evaluation"):
+    with st.expander("Reveal: Conceptual Insights for Activity 4"):
         st.success("""
-        **Model Selection:** The DNN trades human readability for mathematical capacity. One would choose the DNN for complex mapping, but default to the Decision Tree if structural transparency is an absolute requirement.
+        **Model Selection:** The DNN trades human readability for mathematical capacity. It is chosen for its superior ability to map complex features, but the Decision Tree remains the standard if structural transparency is the priority.
         """)
