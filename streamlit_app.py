@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
 import psutil
 import os
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
 from tensorflow.keras.models import Sequential
@@ -56,14 +55,11 @@ display_performance_monitor()
 # ---------------------------------
 if perspective == "Clinical Science":
     app_desc = "Interactive demonstration of a clinical analytics pipeline. Observe how a Deep Neural Network learns to predict in-hospital mortality using data from the eICU Collaborative Research Database."
-    outcome_label = "In-Hospital Mortality (0=Survival, 1=Death)"
 else:
     app_desc = "Interactive demonstration of a computational biology pipeline. Analyze how a Deep Neural Network maps continuous input features to a binary target on a highly imbalanced dataset."
-    outcome_label = "Binary Target (0=Majority Class, 1=Minority Class)"
 
 st.title("Applied Fundamentals of Deep Learning")
 st.write(app_desc)
-
 
 # ---------------------------------
 # Load Dataset 
@@ -76,6 +72,7 @@ def load_data():
         try:
             df = pd.read_csv("diabetes.csv")
         except FileNotFoundError:
+            # Fallback dataset generation if file is missing
             from sklearn.datasets import load_diabetes
             data = load_diabetes(as_frame=True)
             df = data.frame.copy()
@@ -100,7 +97,8 @@ if activity == "Activity 1 - Data Exploration":
     st.header("Activity 1: Exploring Data Types")
     
     st.markdown("### Instructions")
-    st.write("Before training a model, researchers must inspect the raw data to understand feature distributions and identify class imbalances. Use the controls below to preview the dataset and inspect the data structures.")
+    st.write("Complete each activity in order. In the sidebar, toggle between the Clinical Science and Foundational Science perspectives. Record your responses to the module activities exclusively in your Canvas submission area.")
+    st.write("Before training a model, researchers must inspect the raw data to understand feature distributions and identify class imbalances.")
     
     st.subheader("Data Preview")
     n_rows = st.slider(
@@ -119,30 +117,36 @@ if activity == "Activity 1 - Data Exploration":
     feature_to_plot = st.selectbox(
         "Select a feature to visualize:", 
         feature_cols,
-        help="Choose a specific metric to see a histogram of its distribution."
+        help="Choose a specific metric to see a chart of its distribution."
     )
     
-    # ADA COMPLIANCE: Colorblind safe colors
-    fig = px.histogram(
-        df, x=feature_to_plot, color="Outcome", barmode="overlay",
-        title=f"Distribution of {feature_to_plot} grouped by {outcome_label}",
-        color_discrete_sequence=["#1f77b4", "#ff7f0e"] 
-    )
-    st.plotly_chart(fig, use_container_width=True)
-    
-    with st.expander("View chart data as text (Accessible Alternative)"):
-        st.dataframe(df.groupby("Outcome")[feature_to_plot].describe())
+    col1, col2 = st.columns([1, 1.5])
+    with col1:
+        st.markdown("**Outcome Distribution**")
+        class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
+        st.bar_chart(class_counts, color="#1f77b4")
+        st.write(f"**Data Summary:** There are {class_counts.iloc[0]} Survival records and {class_counts.iloc[1]} Death records.")
+        
+    with col2:
+        st.markdown(f"**Mean {feature_to_plot} by Outcome**")
+        feature_means = df.groupby('Outcome')[feature_to_view if 'feature_to_view' in locals() else feature_to_plot].mean()
+        st.bar_chart(feature_means, color="#ff7f0e")
+        st.write(f"**Data Summary:** The mean {feature_to_plot} for Survivors is {feature_means.iloc[0]:.2f}, while for Deaths it is {feature_means.iloc[1]:.2f}.")
 
     st.markdown("---")
     with st.expander("Reveal Expected Insights for Data Exploration"):
         if perspective == "Clinical Science":
-            st.write("The primary job task is to predict in-hospital mortality using demographic and lab data to support ICU triage.")
-            st.write("The advantage of using a Deep Neural Network is its ability to consider complex, non-linear relationships among clinical features. A specific blood pressure measurement might only be flagged as dangerous when combined with specific BMI and Glucose levels.")
-            st.write("Prior to ingestion, features must be standardized. This prevents metrics with large numerical values from overpowering metrics with small values, ensuring all clinical data is evaluated proportionally.")
+            st.info("""
+            **The Job Task:** The objective is to predict in-hospital mortality using demographic and lab data to support ICU triage.
+            **The Algorithmic Advantage:** A Deep Neural Network considers not only the individual clinical features but also the complex, non-linear relationships among them.
+            **Understanding the Data Format:** Prior to ingestion, features are standardized (scaled) so that features with large numerical values do not mathematically overpower those with small values.
+            """)
         else:
-            st.write("The primary job task is binary classification, mapping continuous input arrays to a discrete target variable on a highly imbalanced dataset.")
-            st.write("The advantage of the Deep Neural Network is its automated, non-linear feature extraction across multiple dense layers, eliminating the need for the manual feature engineering required by baseline models.")
-            st.write("Features are standardized to a mean of 0 and a variance of 1. This prevents features with large magnitudes from dominating gradient updates during backpropagation, ensuring stable convergence.")
+            st.info("""
+            **The Job Task:** The task is binary classification, mapping continuous input arrays to a 0 or 1 target variable on a highly imbalanced dataset.
+            **The Algorithmic Advantage:** The Deep Neural Network provides automated, non-linear feature extraction across multiple dense layers, eliminating manual feature engineering.
+            **Understanding the Data Format:** Features are standardized to a mean of 0 and a variance of 1 to ensure stable gradient updates during backpropagation.
+            """)
 
 # --------------------
 # Activity 2 - Model Optimization
@@ -151,25 +155,16 @@ elif activity == "Activity 2 - Model Optimization":
     st.header("Activity 2: Model Optimization")
     
     st.markdown("### Instructions")
-    st.write("Configure the optimization parameters to dictate how the network updates its internal weights. Execute the training pipeline and evaluate the resulting learning curve and global accuracy.")
+    st.write("Configure the optimization parameters to dictate how the network updates its internal weights. Execute the training pipeline and evaluate the resulting learning curve.")
     
     st.sidebar.subheader("Training Parameters")
-    epochs = st.sidebar.slider(
-        "Epochs", 
-        min_value=5, max_value=50, value=50, 
-        help="Determines the number of complete passes through the training dataset."
-    )
-    batch_size = st.sidebar.select_slider(
-        "Batch Size", 
-        options=[8, 16, 32], value=16, 
-        help="Determines the number of samples processed before the model updates its internal weights."
-    )
+    epochs = st.sidebar.slider("Epochs", 5, 50, 50, help="Number of complete passes through the training dataset.")
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Samples processed before the model updates its weights.")
 
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
         st.subheader("Deep Neural Network Architecture")
-        
         st.code("""
 model = Sequential([
     Input(shape=(X_scaled.shape[1],)),
@@ -182,7 +177,7 @@ model = Sequential([
 ])
         """, language='python')
         
-        if st.button("Execute Training", help="Initialize weights and begin the gradient optimization process."):
+        if st.button("Execute Training"):
             X = df.drop(columns=['Outcome']).values
             y = df['Outcome'].values
             scaler = StandardScaler()
@@ -208,31 +203,23 @@ model = Sequential([
     with col2:
         if 'act2_history' in st.session_state:
             st.subheader("Model Learning Curve")
-            
-            hist_df = pd.DataFrame(st.session_state['act2_history'])
-            hist_df['Epoch'] = hist_df.index + 1
-            
-            fig = px.line(
-                hist_df, x='Epoch', y='accuracy', 
-                title="Training Accuracy per Epoch",
-                color_discrete_sequence=["#1f77b4"]
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            
-            final_acc = hist_df['accuracy'].iloc[-1]
-            st.metric("Final Global Accuracy", f"{final_acc:.4f}", help="The overall proportion of correct predictions across all classes.")
-            
-            with st.expander("View learning curve data as text (Accessible Alternative)"):
-                st.dataframe(hist_df[['Epoch', 'accuracy']])
+            st.line_chart(pd.DataFrame(st.session_state['act2_history'])['accuracy'])
+            final_acc = st.session_state['act2_history']['accuracy'][-1]
+            st.metric("Final Global Accuracy", f"{final_acc:.4f}")
+            st.write(f"**Data Summary:** The model converged with a final global training accuracy of {final_acc:.2%}.")
 
     st.markdown("---")
     with st.expander("Reveal Expected Insights for Model Optimization"):
         if perspective == "Clinical Science":
-            st.write("While the DNN often reaches a higher raw accuracy score than the Milestone 1 Decision Tree due to its ability to find hidden patterns, global accuracy is highly deceptive in this clinical context.")
-            st.write("Total accuracy is an invalid evaluation metric for this case. Because the vast majority of patients survive, a model could predict 'Survival' for every patient and achieve high accuracy without successfully detecting a single mortality case. Robust clinical evaluation requires analyzing Sensitivity, Specificity, and Precision.")
+            st.warning("""
+            **Comparison to MS1:** While the DNN may reach higher accuracy than the Decision Tree, global accuracy is deceptive here.
+            **Metric Suitability:** Total accuracy is not a valid evaluation metric for this specific case because the vast majority of patients survive.
+            """)
         else:
-            st.write("The DNN has a higher capacity for feature extraction than the MS1 Decision Tree, but it is necessary to evaluate if the network is actively optimizing for the minority class or merely defaulting to the majority class distribution.")
-            st.write("Total accuracy is an insufficient metric. In highly imbalanced datasets, the binary cross-entropy loss function is heavily dominated by the majority class, masking the model's true predictive capability and convergence on the minority class.")
+            st.warning("""
+            **Comparison to MS1:** The DNN has higher capacity, but we must evaluate if it is optimizing for the minority class or defaulting to the majority.
+            **Metric Suitability:** In imbalanced datasets, total accuracy is insufficient as the loss function is dominated by the majority class.
+            """)
 
 # --------------------
 # Activity 3 - Cross-Validation Analysis
@@ -241,20 +228,17 @@ elif activity == "Activity 3 - Cross-Validation Analysis":
     st.header("Activity 3: Cross-Validation and Trade-Offs")
     
     st.markdown("### Instructions")
-    st.write("Execute the 5-fold cross-validation analysis to generate robust evaluation metrics. Adjust the classification threshold to observe the statistical trade-offs between Sensitivity (Recall), Specificity, and Precision.")
+    st.write("Execute the 5-fold cross-validation analysis. Adjust the classification threshold to observe the statistical trade-offs between Sensitivity and Specificity.")
 
-    if st.button("Run 5-Fold Evaluation", help="Execute 5-fold cross-validation to rigorously assess model generalization."):
+    if st.button("Run 5-Fold Evaluation"):
         X = df.drop(columns=['Outcome']).values
         y = df['Outcome'].values
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
         
         results = []
         progress_bar = st.progress(0)
-        status_text = st.empty()
         
         for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
-            status_text.text(f"Processing Fold {fold + 1} of 5...")
-            
             scaler = StandardScaler()
             X_train = scaler.fit_transform(X[train_idx])
             X_val = scaler.transform(X[val_idx])
@@ -270,60 +254,39 @@ elif activity == "Activity 3 - Cross-Validation Analysis":
                 Dense(1, activation='sigmoid')
             ])
             model.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['accuracy'])
-            
             model.fit(X_train, y_train, epochs=15, batch_size=32, verbose=0)
             y_prob = model.predict(X_val, verbose=0)
             results.append((y_val, y_prob))
-            
             progress_bar.progress((fold + 1) / 5)
         
-        status_text.text("Cross-validation procedure complete.")
         st.session_state['act3_results'] = results
         st.success("Evaluation Metrics Generated")
 
     if 'act3_results' in st.session_state:
-        threshold = st.slider("Classification Threshold", 0.1, 0.9, 0.5, help="Modifying this boundary alters the probability required to classify an instance as positive.")
+        threshold = st.slider("Classification Threshold", 0.1, 0.9, 0.5)
         
         metrics = []
-        for fold_idx, (y_true, y_prob) in enumerate(st.session_state['act3_results']):
+        for y_true, y_prob in st.session_state['act3_results']:
             y_pred = (y_prob > threshold).astype(int).flatten()
             tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
-            
-            acc = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+            acc = (tp + tn) / (tp + tn + fp + fn)
             sens = tp / (tp + fn) if (tp + fn) > 0 else 0
             spec = tn / (tn + fp) if (tn + fp) > 0 else 0
             prec = tp / (tp + fp) if (tp + fp) > 0 else 0
-            
-            metrics.append([fold_idx + 1, acc, sens, spec, prec])
+            metrics.append([acc, sens, spec, prec])
         
-        metrics_df = pd.DataFrame(metrics, columns=['Fold', 'Accuracy', 'Sensitivity', 'Specificity', 'Precision'])
-        
+        avg_m = np.mean(metrics, axis=0)
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Avg Accuracy", f"{metrics_df['Accuracy'].mean():.4f}", help="Calculated as: (TP + TN) / Total Predictions")
-        c2.metric("Avg Sensitivity", f"{metrics_df['Sensitivity'].mean():.4f}", help="Calculated as: TP / (TP + FN)")
-        c3.metric("Avg Specificity", f"{metrics_df['Specificity'].mean():.4f}", help="Calculated as: TN / (TN + FP)")
-        c4.metric("Avg Precision", f"{metrics_df['Precision'].mean():.4f}", help="Calculated as: TP / (TP + FP)")
-        
-        st.subheader("Fold Performance Overview")
-        
-        fig = px.bar(
-            metrics_df, x="Fold", y="Accuracy", title="Accuracy per Fold", 
-            text_auto=".3f", range_y=[0, 1], color_discrete_sequence=["#1f77b4"]
-        )
-        fig.add_hline(y=metrics_df['Accuracy'].mean(), line_dash="dash", line_color="#ff7f0e", annotation_text="Mean")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        with st.expander("View fold metrics as text (Accessible Alternative)"):
-            st.dataframe(metrics_df)
+        c1.metric("Avg Accuracy", f"{avg_m[0]:.3f}")
+        c2.metric("Avg Sensitivity", f"{avg_m[1]:.3f}")
+        c3.metric("Avg Specificity", f"{avg_m[2]:.3f}")
+        c4.metric("Avg Precision", f"{avg_m[3]:.3f}")
 
     st.markdown("---")
     with st.expander("Reveal Expected Insights for Cross-Validation Analysis"):
-        if perspective == "Clinical Science":
-            st.write("Adjusting the threshold reveals a critical clinical trade-off. Lowering the threshold effectively increases Average Sensitivity (ensuring more potential mortality cases are flagged) at the direct expense of Average Specificity (generating more false alarms).")
-            st.write("In applied hospital environments, analytical teams must identify the optimal operational balance that maximizes patient safety without creating alert fatigue among the nursing staff.")
-        else:
-            st.write("Shifting the decision boundary practically simulates traversing a Receiver Operating Characteristic (ROC) curve. This illustrates the model's behavior in the Precision-Recall space.")
-            st.write("This interactive adjustment clearly demonstrates how effectively the network minimizes False Negatives versus False Positives during minority class optimization.")
+        st.info("""
+        **Performance Evaluation:** Lowering the threshold increases Sensitivity (catching more mortality cases) but decreases Specificity (generating more false alarms). This effectively simulates traversing an ROC curve.
+        """)
 
 # --------------------
 # Activity 4 - Strategic Evaluation
@@ -332,38 +295,31 @@ elif activity == "Activity 4 - Strategic Evaluation":
     st.header("Activity 4: Strategic Evaluation")
     
     st.markdown("### Instructions")
-    st.write("Contrast the architectural capabilities of the Deep Neural Network with the Milestone 1 Decision Tree. Determine the optimal algorithmic approach based on organizational requirements for interpretability versus predictive performance.")
+    st.write("Determine the optimal algorithmic approach based on organizational requirements for interpretability versus performance.")
 
-    st.subheader("Architectural Comparison Matrix")
-    
+    st.subheader("Architectural Comparison")
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("**Decision Tree (Milestone 1)**")
-        st.write("- **Logic:** Employs orthogonal, interpretable 'If-Then' splits.")
-        st.write("- **Transparency:** High (White Box model).")
+        st.markdown("**Decision Tree (MS1)**")
+        st.write("- Logic: Interpretable 'If-Then' splits.")
+        st.write("- Transparency: High (White Box).")
     with col2:
         st.markdown("**Deep Neural Network (Current)**")
-        st.write("- **Logic:** Utilizes complex, non-linear combinations across multiple dense hidden layers.")
-        st.write("- **Transparency:** Low (Black Box model).")
+        st.write("- Logic: Complex non-linear combinations.")
+        st.write("- Transparency: Low (Black Box).")
         
     st.markdown("---")
-    
-    priority = st.select_slider(
-        "Select Core Organizational Requirement:", 
-        options=["Interpretability", "Balanced", "Performance"], 
-        help="Select the primary requirement to reveal the recommended deployment strategy."
-    )
+    priority = st.select_slider("Select Requirement:", options=["Interpretability", "Balanced", "Performance"])
     
     if priority == "Interpretability":
-        st.info("Deployment Strategy: Utilize the Decision Tree. Clinical adoption often mandates high interpretability to ensure practitioners can validate the underlying logic of a prediction.")
+        st.info("Strategy: Utilize the Decision Tree for human-readable logic.")
     elif priority == "Performance":
-        st.success("Deployment Strategy: Utilize the Deep Neural Network. Maximizing raw detection capability is prioritized to ensure high-risk patients are successfully triaged.")
+        st.success("Strategy: Utilize the DNN for maximum predictive power.")
     else:
-        st.warning("Deployment Strategy: An ensemble approach or the application of post-hoc explainability frameworks is required to balance predictive power and transparency.")
+        st.warning("Strategy: Hybrid or post-hoc explainability required.")
 
     st.markdown("---")
     with st.expander("Reveal Expected Insights for Strategic Evaluation"):
-        if perspective == "Clinical Science":
-            st.write("You would likely deploy the DNN to maximize the detection of at-risk patients and allocate life-saving resources effectively. However, if hospital administrators or doctors refuse to use a 'Black Box' system because they cannot interpret the reasoning behind a prediction, the Decision Tree must be used to maintain clinician trust.")
-        else:
-            st.write("The DNN provides superior capacity for non-linear feature extraction compared to the orthogonal decision boundaries of the Decision Tree. You would choose the DNN for complex, high-dimensional mapping tasks, but default to the Decision Tree if structural transparency and model explainability are absolute organizational requirements.")
+        st.success("""
+        **Model Selection:** The DNN trades human readability for mathematical capacity. One would choose the DNN for complex mapping, but default to the Decision Tree if structural transparency is an absolute requirement.
+        """)
