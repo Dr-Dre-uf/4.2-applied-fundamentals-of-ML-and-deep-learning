@@ -43,21 +43,18 @@ display_system_monitor()
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_csv("diabetes.csv")
+        # Prioritize the local diabetes.csv file to match the notebook
+        df = pd.read_csv("data/diabetes.csv")
     except:
-        from sklearn.datasets import load_diabetes
-        data = load_diabetes(as_frame=True)
-        df = data.frame.copy()
-        df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
-        df.drop(columns='target', inplace=True)
-    
-    mapping = {
-        'age': 'Age', 'bmi': 'BMI', 'bp': 'BloodPressure', 
-        'Pregnancies': 'Pregnancies', 'Glucose': 'Glucose', 
-        'SkinThickness': 'SkinThickness', 'Insulin': 'Insulin',
-        'DiabetesPedigreeFunction': 'DiabetesPedigreeFunction'
-    }
-    df.rename(columns=mapping, inplace=True)
+        try:
+            df = pd.read_csv("diabetes.csv")
+        except:
+            # Fallback if CSV is missing
+            from sklearn.datasets import load_diabetes
+            data = load_diabetes(as_frame=True)
+            df = data.frame.copy()
+            df['Outcome'] = (df['target'] > df['target'].median()).astype(int)
+            df.drop(columns='target', inplace=True)
     return df
 
 df = load_data()
@@ -68,12 +65,15 @@ df = load_data()
 if activity == "Activity 1: Objective and Data":
     st.title("Activity 1: Applied Fundamentals")
     
-    with st.expander("Activity Guide: How to Use This Page", expanded=True):
-        st.write("1. **Explore the Distribution:** Check the 'Outcome Distribution' chart to see the mortality rate baseline.")
-        st.write("2. **Compare Features:** Use the dropdown to see how specific features differ between outcomes.")
+    with st.expander("Activity Guide: Data Exploration", expanded=True):
+        st.write("1. Review the outcome distribution to establish the mortality rate baseline.")
+        st.write("2. Analyze how specific clinical metrics correlate with patient outcomes.")
 
     st.markdown("### Interactive Data Exploration")
-    feature_to_view = st.selectbox("Select a Clinical Feature to Analyze:", df.columns[:-1], 
+    
+    # Filter to only show feature columns (excluding Outcome)
+    feature_cols = [col for col in df.columns if col != 'Outcome']
+    feature_to_view = st.selectbox("Select a Clinical Feature to Analyze:", feature_cols, 
                                    help="Analyze how this clinical metric correlates with patient outcomes.")
     
     col1, col2 = st.columns([1, 1.5])
@@ -81,42 +81,46 @@ if activity == "Activity 1: Objective and Data":
         st.markdown("**Outcome Distribution**")
         class_counts = df['Outcome'].value_counts().rename(index={0: 'Survival (0)', 1: 'Death (1)'})
         st.bar_chart(class_counts, color="#FF4B4B")
+        
+        # ADA Compliance Text Summary
         st.write(f"**Data Summary:** There are {class_counts.iloc[0]} Survival records and {class_counts.iloc[1]} Death records. This represents a significant class imbalance.")
         
     with col2:
         st.markdown(f"**Mean {feature_to_view} by Outcome**")
         feature_means = df.groupby('Outcome')[feature_to_view].mean()
         st.bar_chart(feature_means)
+        
+        # ADA Compliance Text Summary
         st.write(f"**Data Summary:** The average {feature_to_view} for Survivors is {feature_means.iloc[0]:.2f}, while the average for Deaths is {feature_means.iloc[1]:.2f}.")
 
-    with st.expander("Reveal: Activity 1 Application"):
+    with st.expander("Reveal: Conceptual Insights for Activity 1"):
         if track == "Clinical Science":
             st.info("""
-            **What is the job task?** The job task is to predict in-hospital mortality using demographic and lab data to support ICU triage.
+            **Understanding the Data Format:** You may notice that when the data is fed into the model, the numbers look very small (e.g., between -0.05 and 0.05). This is because the data is 'Standardized'. In predictive modeling, a large number like Glucose (e.g., 148) could overpower a small number like DiabetesPedigreeFunction (e.g., 0.627). Standardizing transforms the data so all features are treated equally.
             
-            **What is the advantage of using a DNN?** A Deep Neural Network considers not only the individual clinical features but also the complex, non-linear relationships among them (e.g., how low blood pressure interacts specifically with a high BMI and high Glucose).
+            **The DNN Advantage:** A Deep Neural Network considers not only the individual parameters but the complex relationships among them. For example, a slightly lower blood pressure measurement may not be a problem for an otherwise healthy person, but if combined with other specific risk factors, it can be flagged as dangerous.
             """)
         else:
             st.info("""
-            **What is the job task?** The task is binary classification: mapping continuous input arrays to a 0 or 1 target variable on a highly imbalanced dataset.
+            **Understanding the Data Format:** Prior to model ingestion, features are scaled to a mean of 0 and a variance of 1. This prevents features with larger numerical magnitudes from dominating the gradient updates during backpropagation.
             
-            **What is the advantage of using a DNN?** The DNN provides automated, non-linear feature extraction across multiple hidden layers, eliminating the need for manual feature engineering required by traditional baseline models.
+            **The DNN Advantage:** The DNN provides automated, non-linear feature extraction across multiple hidden layers, eliminating the need for manual feature engineering required by traditional baseline models.
             """)
 
 # ==========================================
 # ACTIVITY 2: TRAINING AND BASE METRICS
 # ==========================================
 elif activity == "Activity 2: Training and Base Metrics":
-    st.title("Activity 2: Training and Accuracy")
+    st.title("Activity 2: Training and Base Metrics")
     
-    with st.expander("Activity Guide: How to Train the Model", expanded=True):
-        st.write("1. **Set Parameters:** Use the sidebar sliders to set Epochs and Batch Size.")
-        st.write("2. **Train:** Click 'Execute Training' to start the DNN optimization.")
-        st.write("3. **Observe:** Does total accuracy reflect true performance in this scenario?")
+    with st.expander("Activity Guide: Model Optimization", expanded=True):
+        st.write("1. Set the Epochs and Batch Size parameters.")
+        st.write("2. Execute the DNN training to observe the optimization process.")
+        st.write("3. Review the learning curve and final accuracy score.")
 
     st.sidebar.subheader("Training Parameters")
     epochs = st.sidebar.slider("Epochs", 5, 50, 50, help="More epochs allow the model to learn longer.")
-    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Smaller batches make training more granular.")
+    batch_size = st.sidebar.select_slider("Batch Size", options=[8, 16, 32], value=16, help="Smaller batches make training updates more frequent.")
 
     col1, col2 = st.columns([1, 1.5])
     
@@ -136,8 +140,8 @@ model = Sequential([
         """, language='python')
         
         if st.button("Execute Training", help="Click to train the Deep Neural Network."):
-            X = df.iloc[:, :-1].values
-            y = df.iloc[:, -1].values
+            X = df.drop(columns=['Outcome']).values
+            y = df['Outcome'].values
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(X)
             
@@ -166,21 +170,15 @@ model = Sequential([
             final_acc = st.session_state['act2_history']['accuracy'][-1]
             st.metric("Final Total Accuracy", f"{final_acc:.2%}", help="The overall percentage of correct predictions.")
             
+            # ADA Compliance Text Summary
             st.write(f"**Data Summary:** The model achieved a final global training accuracy of {final_acc:.2%}.")
             
-            with st.expander("Reveal: Activity 2 Application"):
-                if track == "Clinical Science":
-                    st.warning("""
-                    **Is it better than the MS1 Decision Tree?** While the DNN may reach a higher raw accuracy score due to its ability to find hidden patterns, accuracy is highly deceptive here. 
-                    
-                    **Is total accuracy a good metric?** No. Because most patients survive (class imbalance), a model could guess "Survival" for everyone and still appear highly accurate while failing to detect a single mortality risk.
-                    """)
-                else:
-                    st.warning("""
-                    **Is it better than the MS1 Decision Tree?** The DNN has higher capacity, but we must evaluate if it is actually learning the minority class or just defaulting to the majority.
-                    
-                    **Is total accuracy a good metric?** No. In imbalanced datasets, the binary cross-entropy loss function is dominated by the majority class, masking the model's true predictive capability on the minority class.
-                    """)
+            with st.expander("Reveal: Conceptual Insights for Activity 2"):
+                st.warning("""
+                **Evaluating Performance:** Setting epochs to the maximum and batch size to the minimum often yields the highest training accuracy. However, in practice, this can lead to 'overfitting', where the model memorizes the training data but fails on new patients.
+                
+                **The Metric Problem:** In an imbalanced dataset (where the vast majority survive), total accuracy is misleading. A model could simply predict 'Survival' for everyone and achieve high accuracy without successfully detecting a single mortality case. For a true evaluation, metrics like Sensitivity, Specificity, and the F1 Score must be considered.
+                """)
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -188,13 +186,13 @@ model = Sequential([
 elif activity == "Activity 3: Evaluation Trade-offs":
     st.title("Activity 3: Advanced Clinical Metrics")
     
-    with st.expander("Activity Guide: How to Evaluate the Model", expanded=True):
-        st.write("1. **Generate Predictions:** Click 'Run 5-Fold Evaluation'.")
-        st.write("2. **Adjust Threshold:** Move the slider to shift the balance between Sensitivity and Specificity.")
+    with st.expander("Activity Guide: Cross-Validation", expanded=True):
+        st.write("1. Generate rigorous predictions using 5-Fold Evaluation.")
+        st.write("2. Shift the classification threshold to observe the inverse relationship between Sensitivity and Specificity.")
 
     if st.button("Run 5-Fold Evaluation", help="Execute 5-fold cross-validation to rigorously test the model."):
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
+        X = df.drop(columns=['Outcome']).values
+        y = df['Outcome'].values
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
         
         results = []
@@ -253,15 +251,12 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         c3.metric("Avg Specificity", f"{avg_m[2]:.3f}", help="True Negatives / Actual Negatives")
         c4.metric("Avg Precision", f"{avg_m[3]:.3f}", help="True Positives / Predicted Positives")
         
-        with st.expander("Reveal: Activity 3 Application"):
-            if track == "Clinical Science":
-                st.info("""
-                **How is the performance now?** Adjusting the threshold reveals the clinical trade-off. Lowering the threshold increases Sensitivity (catching more potential deaths) but decreases Specificity (creating more false alarms). Evaluating these metrics provides a much more honest view of the model's bedside utility than Total Accuracy.
-                """)
-            else:
-                st.info("""
-                **How is the performance now?** Shifting the decision boundary illustrates the model's behavior in the Precision-Recall space. We can now clearly see how effectively the network minimizes False Negatives versus False Positives, offering a truer picture of minority class optimization.
-                """)
+        with st.expander("Reveal: Conceptual Insights for Activity 3"):
+            st.info("""
+            **The ROC Curve Connection:** Adjusting the threshold above is the practical equivalent of analyzing a Receiver Operating Characteristic (ROC) curve. 
+            
+            Lowering the threshold increases Average Sensitivity (flagging more potential mortality cases) but decreases Average Specificity (generating more false positives). In a clinical environment, researchers must identify the optimal balance to ensure safety without overwhelming staff with false alarms.
+            """)
 
 # ==========================================
 # ACTIVITY 4: STRATEGIC COMPARISON
@@ -270,18 +265,18 @@ elif activity == "Activity 4: Strategic Comparison":
     st.title("Activity 4: Model Strategy")
     
     with st.expander("Activity Guide: Final Assessment", expanded=True):
-        st.write("Compare the DNN to the Decision Tree and determine which to deploy based on your priorities.")
+        st.write("Analyze the architectural differences between the models to determine the best deployment strategy.")
 
     st.subheader("Decision Matrix")
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("**Decision Tree (MS1)**")
+        st.markdown("**Decision Tree (Milestone 1)**")
         st.write("- **Logic:** Interpretable 'If-Then' branches.")
         st.write("- **Transparency:** High (White Box).")
     with col2:
         st.markdown("**Deep Neural Network (DNN)**")
-        st.write("- **Logic:** Complex non-linear combinations across layers.")
+        st.write("- **Logic:** Complex non-linear combinations across multiple dense layers.")
         st.write("- **Transparency:** Low (Black Box).")
         
     st.markdown("---")
@@ -289,18 +284,15 @@ elif activity == "Activity 4: Strategic Comparison":
     priority = st.select_slider("Select Core Requirement:", options=["Interpretability", "Balanced", "Performance"], help="Slide to reveal the recommended algorithm based on organizational goals.")
     
     if priority == "Interpretability":
-        st.info("Strategy: Use the Decision Tree. Clinician trust relies on understanding the exact 'If-Then' logic.")
+        st.info("Strategy: Use the Decision Tree. Clinician trust relies on understanding the exact rules governing the prediction.")
     elif priority == "Performance":
-        st.success("Strategy: Use the DNN. Raw detection power is the highest priority for patient safety.")
+        st.success("Strategy: Use the DNN. Raw detection power is the highest priority for accurate patient triage.")
     else:
-        st.warning("Strategy: Hybrid approach required.")
+        st.warning("Strategy: A hybrid or ensemble approach is required to balance power and transparency.")
 
-    with st.expander("Reveal: Activity 4 Application"):
-        if track == "Clinical Science":
-            st.success("""
-            **Decision Tree or DNN?** You would likely deploy the DNN to maximize the detection of at-risk patients and save lives. However, if hospital administrators or doctors refuse to use a "Black Box" system because they cannot interpret the reasoning behind a prediction, the Decision Tree must be used.
-            """)
-        else:
-            st.success("""
-            **Decision Tree or DNN?** The DNN provides superior capacity for non-linear feature extraction compared to the orthogonal decision boundaries of the Decision Tree. You would choose the DNN for complex mapping, but default to the Decision Tree if structural transparency and model explainability are absolute requirements.
-            """)
+    with st.expander("Reveal: Conceptual Insights for Activity 4"):
+        st.success("""
+        **The Core Trade-off:** The DNN yields superior performance because its layers can extract multidimensional representations of the data that a simple decision boundary cannot. However, this structure creates a 'Black Box' where the exact reasoning for a single prediction cannot be easily explained to a clinician or patient. 
+        
+        Organizations must choose between the high predictive power of the DNN and the interpretability of traditional decision trees.
+        """)
