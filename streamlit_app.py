@@ -27,7 +27,7 @@ def display_performance_monitor():
 # ---------------------------------
 # Page Config & Sidebar
 # ---------------------------------
-st.set_page_config(page_title="Applied Fundamentals of Deep Learning", layout="wide")
+st.set_page_config(page_title="Applied Fundamentals of ML and DL", layout="wide")
 
 st.sidebar.markdown("### 1. Select Perspective")
 perspective = st.sidebar.radio(
@@ -58,7 +58,7 @@ if perspective == "Clinical Science":
 else:
     app_desc = "Interactive demonstration of a computational biology pipeline. Analyze how a Deep Neural Network maps continuous input features to a binary target on a highly imbalanced dataset."
 
-st.title("Applied Fundamentals of Deep Learning")
+st.title("Applied Fundamentals of Machine Learning (ML) and Deep Learning (DL)")
 st.write(app_desc)
 
 # ---------------------------------
