@@ -26,7 +26,7 @@ st.set_page_config(page_title="Applied Fundamentals of Deep Learning", layout="w
 
 # --- GLOBAL INSTRUCTIONS ---
 st.markdown("""
-> **Module Instructions:** Complete each activity in order. In the sidebar, toggle between the Clinical Science and Foundational Science perspectives to observe how the identical pipeline is interpreted differently based on specific scientific goals. Record your responses to the module questions in your Canvas submission area or notebook.
+> **Module Instructions:** Complete each activity in order. In the sidebar, toggle between the Clinical Science and Foundational Science perspectives to observe how the identical pipeline is interpreted differently based on specific scientific goals. Record your responses to the module activities exclusively in your Canvas submission area.
 """)
 st.markdown("---")
 
@@ -101,15 +101,19 @@ if activity == "Activity 1: Objective and Data":
     with st.expander("Reveal: Conceptual Insights for Activity 1"):
         if track == "Clinical Science":
             st.info("""
-            **Understanding the Data Format:** Prior to ingestion, features are standardized (scaled). In predictive modeling, a feature with large numerical values like Glucose (e.g., 148) could mathematically overpower a feature with small values like DiabetesPedigreeFunction (e.g., 0.627). Standardization transforms the data so all features are evaluated proportionally.
+            **The Job Task:** The objective is to predict in-hospital mortality using demographic and lab data to support ICU triage.
             
-            **The Algorithmic Advantage:** A Deep Neural Network considers not only the individual parameters but the complex interactions among them. For example, a slightly lower blood pressure measurement may not be critical in isolation, but when combined with other specific risk factors, the network can flag the interaction as highly dangerous.
+            **The Algorithmic Advantage:** A Deep Neural Network considers not only the individual clinical features but also the complex, non-linear relationships among them. For instance, a slightly lower blood pressure measurement may not be critical in isolation, but when combined with specific BMI and Glucose levels, the network can flag the interaction as highly dangerous.
+            
+            **Understanding the Data Format:** Prior to ingestion, features are standardized (scaled). In predictive modeling, a feature with large numerical values like Glucose could mathematically overpower a feature with small values. Standardization transforms the data so all features are evaluated proportionally.
             """)
         else:
             st.info("""
-            **Understanding the Data Format:** Features are standardized to a mean of 0 and a variance of 1. This prevents features with larger numerical magnitudes from dominating the gradient updates during backpropagation, ensuring stable convergence.
+            **The Job Task:** The task is binary classification, mapping continuous input arrays to a 0 or 1 target variable on a highly imbalanced dataset.
             
             **The Algorithmic Advantage:** The Deep Neural Network provides automated, non-linear feature extraction across multiple dense layers. This eliminates the need for the manual feature engineering required by traditional baseline models.
+            
+            **Understanding the Data Format:** Features are standardized to a mean of 0 and a variance of 1. This prevents features with larger numerical magnitudes from dominating the gradient updates during backpropagation, ensuring stable convergence.
             """)
 
 # ==========================================
@@ -179,11 +183,18 @@ model = Sequential([
             st.write(f"**Data Summary:** The model converged with a final global training accuracy of {final_acc:.2%}.")
             
             with st.expander("Reveal: Conceptual Insights for Activity 2"):
-                st.warning("""
-                **Evaluating Performance:** Maximizing epochs and minimizing batch size frequently yields the highest training accuracy. However, this often leads to 'overfitting', a scenario where the model memorizes the training data but fails to generalize to new, unseen patient records.
-                
-                **The Metric Problem:** In an imbalanced dataset (where the vast majority of instances belong to the 'Survival' class), total accuracy is highly deceptive. A model could predict 'Survival' for every patient and achieve high accuracy without successfully detecting a single mortality case. Robust evaluation requires analyzing Sensitivity, Specificity, and the F1 Score.
-                """)
+                if track == "Clinical Science":
+                    st.warning("""
+                    **Comparison to MS1 Decision Tree:** While the DNN may reach a higher raw accuracy score due to its ability to find hidden patterns, global accuracy is highly deceptive in this clinical context. 
+                    
+                    **Evaluation Metric Suitability:** Total accuracy is not a valid evaluation metric for this specific case. Because the vast majority of patients survive, a model could predict 'Survival' for every patient and achieve high accuracy without successfully detecting a single mortality case. Robust clinical evaluation requires analyzing Sensitivity, Specificity, and the F1 Score.
+                    """)
+                else:
+                    st.warning("""
+                    **Comparison to MS1 Decision Tree:** The DNN has a higher capacity for feature extraction, but it is necessary to evaluate if the network is actively optimizing for the minority class or merely defaulting to the majority class distribution.
+                    
+                    **Evaluation Metric Suitability:** Total accuracy is an insufficient metric here. In imbalanced datasets, the binary cross-entropy loss function is heavily dominated by the majority class, masking the model's true predictive capability and convergence on the minority class.
+                    """)
 
 # ==========================================
 # ACTIVITY 3: EVALUATION TRADE-OFFS
@@ -257,11 +268,14 @@ elif activity == "Activity 3: Evaluation Trade-offs":
         c4.metric("Avg Precision", f"{avg_m[3]:.3f}", help="Calculated as: TP / (TP + FP)")
         
         with st.expander("Reveal: Conceptual Insights for Activity 3"):
-            st.info("""
-            **The ROC Curve Connection:** Modifying the classification threshold practically simulates traversing a Receiver Operating Characteristic (ROC) curve. 
-            
-            Lowering the threshold effectively increases Average Sensitivity (ensuring more potential mortality cases are flagged) at the direct expense of Average Specificity (generating more false positives). In applied environments, researchers must identify the optimal operational threshold that maximizes safety without overwhelming clinical staff with false alarms.
-            """)
+            if track == "Clinical Science":
+                st.info("""
+                **Performance Evaluation:** Adjusting the threshold clearly reveals the clinical trade-off. Lowering the threshold effectively increases Average Sensitivity (ensuring more potential mortality cases are flagged) at the direct expense of Average Specificity (generating more false alarms). In applied environments, researchers must identify the optimal operational balance that maximizes patient safety.
+                """)
+            else:
+                st.info("""
+                **Performance Evaluation:** Shifting the decision boundary practically simulates traversing a Receiver Operating Characteristic (ROC) curve. This illustrates the model's behavior in the Precision-Recall space, clearly demonstrating how effectively the network minimizes False Negatives versus False Positives during minority class optimization.
+                """)
 
 # ==========================================
 # ACTIVITY 4: STRATEGIC COMPARISON
@@ -294,11 +308,14 @@ elif activity == "Activity 4: Strategic Comparison":
     elif priority == "Performance":
         st.success("Deployment Strategy: Utilize the Deep Neural Network. Maximizing raw detection capability is prioritized to ensure high-risk patients are successfully triaged.")
     else:
-        st.warning("Deployment Strategy: An ensemble approach or the application of post-hoc explainability frameworks (e.g., SHAP) is required to balance predictive power and transparency.")
+        st.warning("Deployment Strategy: An ensemble approach or the application of post-hoc explainability frameworks is required to balance predictive power and transparency.")
 
     with st.expander("Reveal: Conceptual Insights for Activity 4"):
-        st.success("""
-        **The Core Algorithmic Trade-off:** The Deep Neural Network yields superior predictive performance because its hidden layers extract multidimensional representations of the input data that a linear decision boundary cannot capture. However, this complex structure creates a 'Black Box' phenomenon where the exact mathematical reasoning for a single prediction cannot be easily explained to a clinician or patient. 
-        
-        Data science teams must continuously evaluate the organizational trade-off between the high predictive capacity of deep learning models and the essential interpretability provided by traditional algorithms.
-        """)
+        if track == "Clinical Science":
+            st.success("""
+            **Model Selection:** You would likely deploy the DNN to maximize the detection of at-risk patients and allocate life-saving resources effectively. However, if hospital administrators or doctors refuse to use a 'Black Box' system because they cannot interpret the reasoning behind a prediction, the Decision Tree must be used to maintain clinician trust.
+            """)
+        else:
+            st.success("""
+            **Model Selection:** The DNN provides superior capacity for non-linear feature extraction compared to the orthogonal decision boundaries of the Decision Tree. You would choose the DNN for complex, high-dimensional mapping tasks, but default to the Decision Tree if structural transparency and model explainability are absolute organizational requirements.
+            """)
